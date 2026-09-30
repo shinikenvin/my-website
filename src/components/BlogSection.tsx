@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { BlogPost } from '../types';
-import { BLOG_POSTS } from '../data/portfolioData';
 import { BlogArtwork } from './Artwork';
 import { Search, Clock, ArrowRight, Heart, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 
 interface BlogSectionProps {
   onSelectPost: (post: BlogPost) => void;
@@ -12,16 +13,18 @@ interface BlogSectionProps {
 export function BlogSection({ onSelectPost }: BlogSectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const { t } = useLanguage();
+  const { blogPosts } = usePortfolioData();
 
   const categories = [
-    { id: 'all', label: 'Tất cả bài viết' },
+    { id: 'all', label: t.blog.badge },
     { id: 'DevOps & CI/CD', label: 'DevOps & CI/CD' },
     { id: 'Frontend & UI', label: 'Frontend & UI' },
-    { id: 'Kiến trúc & Design', label: 'Kiến trúc & Design' },
-    { id: 'Hiệu năng & Tối ưu', label: 'Hiệu năng & Tối ưu' },
+    { id: 'Kiến trúc & Design', label: 'Kiến trúc / Architecture' },
+    { id: 'Hiệu năng & Tối ưu', label: 'Performance' },
   ];
 
-  const filteredPosts = BLOG_POSTS.filter((post) => {
+  const filteredPosts = blogPosts.filter((post) => {
     const matchesSearch =
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -41,13 +44,13 @@ export function BlogSection({ onSelectPost }: BlogSectionProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div className="space-y-2">
             <div className="text-xs font-mono text-cyan-400">
-              02. Chia sẻ kiến thức &amp; thực chiến
+              02. {t.blog.badge}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Blog Kỹ Thuật &amp; Góc Nhìn Công Nghệ
+              {t.blog.title}
             </h2>
             <p className="text-sm text-slate-400 max-w-xl">
-              Tổng hợp các kinh nghiệm triển khai CI/CD thực tế, tối ưu trải nghiệm hoạt ảnh Framer Motion và nguyên tắc thiết kế giao diện chống AI slop.
+              {t.blog.subtitle}
             </p>
           </div>
 
@@ -58,7 +61,7 @@ export function BlogSection({ onSelectPost }: BlogSectionProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm bài viết, từ khóa..."
+              placeholder="Search / Tìm kiếm..."
               className="w-full pl-9 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/80 transition-colors"
             />
           </div>
@@ -132,11 +135,11 @@ export function BlogSection({ onSelectPost }: BlogSectionProps) {
                   <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
                       <Heart className="w-3.5 h-3.5 text-rose-500" />
-                      <span className="font-mono tabular-nums">{post.likes} lượt thích</span>
+                      <span className="font-mono tabular-nums">{post.likes}</span>
                     </div>
 
                     <div className="text-xs font-semibold text-cyan-400 group-hover:text-cyan-300 flex items-center gap-1 transition-colors">
-                      <span>Đọc bài viết</span>
+                      <span>{t.blog.readMore}</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>

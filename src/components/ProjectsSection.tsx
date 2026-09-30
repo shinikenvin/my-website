@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
-import { PROJECTS_DATA } from '../data/portfolioData';
 import { ProjectArtwork } from './Artwork';
 import { ExternalLink, ArrowRight, Github } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 
 interface ProjectsSectionProps {
   onSelectProject: (project: Project) => void;
@@ -11,17 +12,19 @@ interface ProjectsSectionProps {
 
 export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'devtools' | 'web' | 'ai-cloud'>('all');
+  const { t } = useLanguage();
+  const { projects } = usePortfolioData();
 
   const filterTabs = [
-    { id: 'all', label: 'Tất cả dự án' },
+    { id: 'all', label: t.projects.filterAll },
     { id: 'devtools', label: 'DevOps & CI/CD' },
-    { id: 'web', label: 'Web App & Sáng tạo' },
+    { id: 'web', label: 'Web Apps' },
     { id: 'ai-cloud', label: 'Cloud & Telemetry' },
   ];
 
   const filteredProjects = activeFilter === 'all'
-    ? PROJECTS_DATA
-    : PROJECTS_DATA.filter((p) => p.category === activeFilter);
+    ? projects
+    : projects.filter((p) => p.category === activeFilter);
 
   return (
     <section id="projects" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950/60">
@@ -31,17 +34,17 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div className="space-y-2">
             <div className="text-xs font-mono text-cyan-400">
-              01. Danh mục tác phẩm &amp; mã nguồn
+              01. {t.projects.badge}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Dự Án Nổi Bật &amp; Hệ Thống Thực Tế
+              {t.projects.title}
             </h2>
             <p className="text-sm text-slate-400 max-w-xl">
-              Các sản phẩm được kiến trúc với tiêu chuẩn hiệu năng cao, tối ưu hóa mã nguồn và tích hợp sẵn quy trình CI/CD tự động cập nhật.
+              {t.projects.subtitle}
             </p>
           </div>
 
-          {/* Interactive Filter Tabs (Segmented Control - Allowed by Section 1.A) */}
+          {/* Interactive Filter Tabs */}
           <div className="flex items-center gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800 self-start md:self-auto overflow-x-auto max-w-full">
             {filterTabs.map((tab) => {
               const isActive = activeFilter === tab.id;
@@ -108,7 +111,7 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
                     </p>
                   </div>
 
-                  {/* Tech stack line - Zero-pill clean text discipline */}
+                  {/* Tech stack line */}
                   <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 font-mono">
                     {project.tags.slice(0, 4).join(' · ')}
                   </div>
@@ -119,7 +122,7 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
                       onClick={() => onSelectProject(project)}
                       className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors group/btn"
                     >
-                      <span>Chi tiết kiến trúc</span>
+                      <span>{t.projects.viewDetails}</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </button>
 
@@ -129,7 +132,7 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
                         target="_blank"
                         rel="noreferrer noopener"
                         className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
-                        title="GitHub Repository"
+                        title={t.projects.sourceCode}
                       >
                         <Github className="w-4 h-4" />
                       </a>
@@ -138,7 +141,7 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
                         target="_blank"
                         rel="noreferrer noopener"
                         className="p-1.5 text-slate-400 hover:text-cyan-400 rounded hover:bg-slate-800 transition-colors"
-                        title="Live Demo"
+                        title={t.projects.liveDemo}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>

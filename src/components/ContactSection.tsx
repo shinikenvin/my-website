@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { PERSONAL_INFO } from '../data/portfolioData';
-import { Mail, Github, Send, Copy, Check, CheckCircle2, User, Phone, Globe, Download } from 'lucide-react';
+import { Mail, Github, Send, Copy, Check, CheckCircle2, Globe, Download } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 
 export function ContactSection() {
+  const { t } = useLanguage();
+  const { personalInfo, sendContactMessage } = usePortfolioData();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    subject: 'Trao đổi cơ hội hợp tác dự án',
+    subject: 'Project Inquiry / Consulting',
     message: '',
   });
 
@@ -16,7 +19,7 @@ export function ContactSection() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText(PERSONAL_INFO.email);
+    navigator.clipboard.writeText(personalInfo.email);
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
   };
@@ -24,26 +27,26 @@ export function ContactSection() {
   const handleDownloadVCard = () => {
     const vCardContent = `BEGIN:VCARD
 VERSION:3.0
-N:Shinikenvin;;;;
-FN:Shinikenvin
-TITLE:Full-Stack Software Engineer
-EMAIL;TYPE=INTERNET,PREF:Shinikenvin@gmail.com
-URL;TYPE=WORK:https://shinikenvin.github.io/my-website/
-NOTE:Chuyên phát triển Web App cao cấp, tối ưu hóa Frontend và tự động hóa CI/CD GitHub Actions.
+N:${personalInfo.name};;;;
+FN:${personalInfo.name}
+TITLE:${personalInfo.role}
+EMAIL;TYPE=INTERNET,PREF:${personalInfo.email}
+URL;TYPE=WORK:${personalInfo.website}
+NOTE:Specializing in high-performance web apps, scalable cloud architectures, and GitHub Actions CI/CD automation.
 END:VCARD`;
 
     const blob = new Blob([vCardContent], { type: 'text/vcard' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Shinikenvin-Contact.vcf';
+    a.download = `${personalInfo.name}-Contact.vcf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
       setErrorMsg('Vui lòng điền đầy đủ các thông tin trước khi gửi.');
@@ -58,18 +61,28 @@ END:VCARD`;
     setErrorMsg('');
     setSubmitting(true);
 
-    // Simulate sending message
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      await sendContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+      });
       setSubmitted(true);
       setFormData({
         name: '',
         email: '',
-        subject: 'Trao đổi cơ hội hợp tác dự án',
+        subject: 'Project Inquiry / Consulting',
         message: '',
       });
       setTimeout(() => setSubmitted(false), 5000);
-    }, 900);
+    } catch (err: any) {
+      console.warn('Error sending contact message:', err);
+      // Still show success if local submission works
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -79,13 +92,13 @@ END:VCARD`;
         {/* Section Header */}
         <div className="space-y-2 mb-12">
           <div className="text-xs font-mono text-cyan-400">
-            04. Kết nối &amp; Hợp tác
+            04. {t.contact.badge}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Liên Hệ Trực Tiếp Với Tôi
+            {t.contact.title}
           </h2>
           <p className="text-sm text-slate-400 max-w-xl">
-            Bạn đang có ý tưởng dự án cần hiện thực hóa, muốn tối ưu hóa hệ thống hiện tại hoặc thảo luận về cơ hội làm việc? Đừng ngần ngại nhắn cho tôi.
+            {t.contact.subtitle}
           </p>
         </div>
 
@@ -96,7 +109,7 @@ END:VCARD`;
             
             <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
               <h3 className="text-base font-bold text-white">
-                Kênh liên lạc chính thức
+                {t.contact.directContact}
               </h3>
               
               <div className="space-y-3 text-xs sm:text-sm">
@@ -107,9 +120,9 @@ END:VCARD`;
                       <Mail className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[11px] text-slate-400 font-mono">Email cá nhân</div>
-                      <a href={`mailto:${PERSONAL_INFO.email}`} className="text-slate-200 hover:text-cyan-400 font-medium transition-colors">
-                        {PERSONAL_INFO.email}
+                      <div className="text-[11px] text-slate-400 font-mono">Email</div>
+                      <a href={`mailto:${personalInfo.email}`} className="text-slate-200 hover:text-cyan-400 font-medium transition-colors">
+                        {personalInfo.email}
                       </a>
                     </div>
                   </div>
@@ -131,7 +144,7 @@ END:VCARD`;
                     <div>
                       <div className="text-[11px] text-slate-400 font-mono">GitHub Profile</div>
                       <a 
-                        href={PERSONAL_INFO.github} 
+                        href={personalInfo.github} 
                         target="_blank" 
                         rel="noreferrer noopener"
                         className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
@@ -149,9 +162,9 @@ END:VCARD`;
                       <Globe className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[11px] text-slate-400 font-mono">Website Hosting</div>
+                      <div className="text-[11px] text-slate-400 font-mono">GitHub Pages Hosting</div>
                       <a 
-                        href={PERSONAL_INFO.website} 
+                        href={personalInfo.website} 
                         target="_blank" 
                         rel="noreferrer noopener"
                         className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
@@ -169,14 +182,13 @@ END:VCARD`;
                 className="w-full py-2.5 px-4 text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 hover:text-white border border-slate-700/60 rounded-xl flex items-center justify-center gap-2 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Lưu danh bạ liên hệ (.vcf)</span>
+                <span>Save Contact (.vcf)</span>
               </button>
             </div>
 
             {/* Quick response commitment */}
             <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 space-y-1">
-              <span className="font-semibold text-slate-200">Thời gian phản hồi thông thường:</span>
-              <p>Thường phản hồi trong vòng 2 – 6 giờ làm việc qua email.</p>
+              <span className="font-semibold text-slate-200">{t.contact.responseSpeed}</span>
             </div>
 
           </div>
@@ -190,15 +202,12 @@ END:VCARD`;
                   <div className="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center">
                     <CheckCircle2 className="w-7 h-7" />
                   </div>
-                  <h3 className="text-lg font-bold text-white">Tin nhắn đã được gửi thành công!</h3>
-                  <p className="text-xs sm:text-sm text-slate-300 max-w-md">
-                    Cảm ơn bạn đã liên hệ. Tôi sẽ kiểm tra hộp thư và phản hồi lại sớm nhất qua email của bạn.
-                  </p>
+                  <h3 className="text-lg font-bold text-white">{t.contact.sentSuccess}</h3>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <h3 className="text-base font-bold text-white">
-                    Gửi tin nhắn trực tiếp
+                    {t.contact.sendBtn}
                   </h3>
 
                   {errorMsg && (
@@ -210,13 +219,13 @@ END:VCARD`;
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-slate-300">
-                        Họ và tên của bạn <span className="text-rose-400">*</span>
+                        {t.contact.nameLabel} <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Nguyễn Văn A"
+                        placeholder={t.contact.namePlaceholder}
                         className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
                         required
                       />
@@ -224,13 +233,13 @@ END:VCARD`;
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-slate-300">
-                        Địa chỉ Email nhận phản hồi <span className="text-rose-400">*</span>
+                        {t.contact.emailLabel} <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="email@example.com"
+                        placeholder={t.contact.emailPlaceholder}
                         className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
                         required
                       />
@@ -239,24 +248,21 @@ END:VCARD`;
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-300">
-                      Mục đích trao đổi
+                      {t.contact.subjectLabel}
                     </label>
-                    <select
+                    <input
+                      type="text"
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      placeholder={t.contact.subjectPlaceholder}
                       className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
-                    >
-                      <option value="Trao đổi cơ hội hợp tác dự án">Trao đổi cơ hội hợp tác dự án</option>
-                      <option value="Cần tư vấn kiến trúc Frontend & CI/CD">Cần tư vấn kiến trúc Frontend &amp; CI/CD</option>
-                      <option value="Tuyển dụng vị trí Full-Stack / Frontend">Tuyển dụng vị trí Full-Stack / Frontend</option>
-                      <option value="Kết nối & Chia sẻ công nghệ">Kết nối &amp; Chia sẻ công nghệ</option>
-                    </select>
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
                       <label className="font-medium text-slate-300">
-                        Nội dung tin nhắn <span className="text-rose-400">*</span>
+                        {t.contact.messageLabel} <span className="text-rose-400">*</span>
                       </label>
                       <span className="font-mono text-slate-500 tabular-nums">
                         {formData.message.length}/1000
@@ -267,7 +273,7 @@ END:VCARD`;
                       maxLength={1000}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      placeholder="Mô tả tóm tắt nhu cầu dự án hoặc nội dung bạn muốn trao đổi..."
+                      placeholder={t.contact.messagePlaceholder}
                       className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors resize-none"
                       required
                     />
@@ -281,12 +287,12 @@ END:VCARD`;
                     {submitting ? (
                       <span className="flex items-center gap-2">
                         <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                        <span>Đang gửi thông điệp...</span>
+                        <span>{t.contact.sending}</span>
                       </span>
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Gửi thông điệp ngay</span>
+                        <span>{t.contact.sendBtn}</span>
                       </>
                     )}
                   </button>

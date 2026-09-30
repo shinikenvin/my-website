@@ -1,8 +1,11 @@
 import React from 'react';
 import { EXPERIENCE_DATA, SKILL_GROUPS } from '../data/portfolioData';
 import { Briefcase, Code2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export function AboutSection() {
+  const { t } = useLanguage();
+
   return (
     <section id="about" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950/70">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-16">
@@ -10,13 +13,13 @@ export function AboutSection() {
         {/* Section Header */}
         <div className="space-y-2">
           <div className="text-xs font-mono text-cyan-400">
-            03. Thông tin cá nhân &amp; năng lực
+            03. {t.about.badge}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Về Tôi, Kinh Nghiệm &amp; Kỹ Năng Kỹ Thuật
+            {t.about.title}
           </h2>
           <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Hơn 4 năm gắn bó với hệ sinh thái web hiện đại, từ kiến tạo giao diện người dùng mượt mà đến xây dựng hạ tầng phân tán và tự động hóa quy trình phân phối sản phẩm.
+            {t.about.subtitle}
           </p>
         </div>
 
@@ -26,7 +29,7 @@ export function AboutSection() {
             <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-800/60 flex items-center justify-center text-cyan-400">
               <Code2 className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Hiệu Năng &amp; Trải Nghiệm Mượt</h3>
+            <h3 className="text-base font-bold text-white">Performance & Fluid UX</h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Mọi tương tác được tối ưu ở tần số 60 FPS, nói không với layout shift và đảm bảo điểm số Core Web Vitals luôn đạt mức tối đa.
             </p>
@@ -36,7 +39,7 @@ export function AboutSection() {
             <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-800/60 flex items-center justify-center text-indigo-400">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Thiết Kế Tinh Gọn, Có Gu</h3>
+            <h3 className="text-base font-bold text-white">Zero-Pill & Editorial Aesthetics</h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Áp dụng triết lý Zero-Pill, phối màu chuẩn 60-30-10 và phân cấp typography rõ ràng để mang lại vẻ ngoài chững chạc và chuyên nghiệp.
             </p>
@@ -46,7 +49,7 @@ export function AboutSection() {
             <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Tự Động Hóa CI/CD Chuẩn Mực</h3>
+            <h3 className="text-base font-bold text-white">GitHub Actions Automated CI/CD</h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Mọi dự án đều được thiết lập pipeline tự động kiểm thử và deploy qua GitHub Actions, loại bỏ hoàn toàn các thao tác thủ công dễ sai lệch.
             </p>
@@ -60,7 +63,7 @@ export function AboutSection() {
               <Briefcase className="w-4 h-4" />
             </div>
             <h3 className="text-xl font-bold text-white tracking-tight">
-              Lộ Trình Nghề Nghiệp &amp; Kinh Nghiệm
+              {t.about.tabExperience}
             </h3>
           </div>
 
@@ -98,9 +101,9 @@ export function AboutSection() {
                     ))}
                   </ul>
 
-                  {/* Skills tags - Zero-Pill text discipline */}
+                  {/* Skills tags */}
                   <div className="pt-2 text-xs text-slate-400 border-t border-slate-800/70">
-                    <span className="text-slate-300 font-medium mr-2">Công nghệ:</span>
+                    <span className="text-slate-300 font-medium mr-2">{t.about.tabSkills}:</span>
                     <span>{exp.skills.join(' · ')}</span>
                   </div>
                 </div>
@@ -116,7 +119,7 @@ export function AboutSection() {
               <Code2 className="w-4 h-4" />
             </div>
             <h3 className="text-xl font-bold text-white tracking-tight">
-              Bảng Phân Bổ Kỹ Năng &amp; Công Nghệ
+              {t.about.tabSkills}
             </h3>
           </div>
 

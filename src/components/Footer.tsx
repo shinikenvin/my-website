@@ -1,12 +1,16 @@
 import React from 'react';
 import { PERSONAL_INFO } from '../data/portfolioData';
-import { ArrowUp, Terminal, Github, Heart } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { LanguageSelector } from './LanguageSelector';
 
 interface FooterProps {
-  onOpenCiCd: () => void;
+  onOpenCiCd?: () => void;
 }
 
-export function Footer({ onOpenCiCd }: FooterProps) {
+export function Footer({}: FooterProps) {
+  const { t } = useLanguage();
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -22,67 +26,55 @@ export function Footer({ onOpenCiCd }: FooterProps) {
               Shinikenvin
             </div>
             <p className="text-slate-400 text-xs">
-              Trang web cá nhân phát triển bằng React 19, Tailwind CSS &amp; Framer Motion.
+              {t.footer.builtWith}
             </p>
           </div>
 
           {/* Quick link navigation */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium">
-            <a href="#hero" className="hover:text-white transition-colors">
-              Tổng quan
+            <a href="#hero" className="hover:text-cyan-400 transition-colors">
+              {t.nav.overview}
             </a>
-            <a href="#projects" className="hover:text-white transition-colors">
-              Dự án
+            <a href="#projects" className="hover:text-cyan-400 transition-colors">
+              {t.nav.projects}
             </a>
-            <a href="#blog" className="hover:text-white transition-colors">
-              Blog
+            <a href="#blog" className="hover:text-cyan-400 transition-colors">
+              {t.nav.blog}
             </a>
-            <a href="#about" className="hover:text-white transition-colors">
-              Về tôi
+            <a href="#about" className="hover:text-cyan-400 transition-colors">
+              {t.nav.skills}
             </a>
-            <button
-              onClick={onOpenCiCd}
-              className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>CI/CD Workflow</span>
-            </button>
-            <a
-              href="https://github.com/shinikenvin"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:text-white flex items-center gap-1 transition-colors"
-            >
-              <Github className="w-3.5 h-3.5" />
-              <span>GitHub</span>
+            <a href="#contact" className="hover:text-cyan-400 transition-colors">
+              {t.nav.contact}
             </a>
           </div>
 
-          {/* Back to top button */}
-          <button
-            onClick={scrollToTop}
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-colors flex items-center gap-1.5"
-            aria-label="Cuộn lên đầu trang"
-          >
-            <ArrowUp className="w-4 h-4" />
-            <span className="text-[11px] font-mono">Đầu trang</span>
-          </button>
+          {/* Language and Back to top button */}
+          <div className="flex items-center gap-2.5">
+            <LanguageSelector />
+            <button
+              onClick={scrollToTop}
+              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-colors flex items-center gap-1.5"
+              aria-label="Cuộn lên đầu trang"
+            >
+              <ArrowUp className="w-4 h-4" />
+              <span className="text-[11px] font-mono">Top</span>
+            </button>
+          </div>
         </div>
 
         {/* Bottom copyright line */}
         <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 text-[11px]">
           <div>
-            © {new Date().getFullYear()} Shinikenvin. Mọi bản quyền được bảo lưu.
+            © {new Date().getFullYear()} {t.footer.rights}
           </div>
           <div className="flex items-center gap-1">
-            <span>Sẵn sàng deploy lên</span>
+            <span>Portfolio:</span>
             <a
-              href={PERSONAL_INFO.website}
-              target="_blank"
-              rel="noreferrer"
+              href="#hero"
               className="text-slate-400 hover:text-cyan-400 underline font-mono"
             >
-              shinikenvin.github.io/my-website
+              Shinikenvin Developer
             </a>
           </div>
         </div>

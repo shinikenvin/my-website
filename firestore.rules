@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Portfolio content & settings
+    match /content/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Projects management
+    match /projects/{projectId} {
+      allow read, write: if true;
+    }
+
+    // Blog posts management
+    match /posts/{postId} {
+      allow read, write: if true;
+    }
+
+    // Skills & experience
+    match /skills/{skillId} {
+      allow read, write: if true;
+    }
+
+    // Contact messages from visitors
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // Live online chat messages between visitors and admin
+    match /live_chat/{chatId} {
+      allow read, write: if true;
+    }
+
+    // Admin authentication credentials & recovery
+    match /admin/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,87 +1,125 @@
 import React from 'react';
+import { Camera } from 'lucide-react';
 
-export function DeveloperPortrait({ className = "w-full h-full" }: { className?: string }) {
+export function DeveloperPortrait({ 
+  className = "w-full h-full",
+  avatarUrl = null,
+  onEdit
+}: { 
+  className?: string;
+  avatarUrl?: string | null;
+  onEdit?: () => void;
+}) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 border border-slate-800 shadow-2xl flex items-center justify-center p-6 ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 border border-slate-800 shadow-2xl flex items-center justify-center p-6 group ${className}`}>
       {/* Background ambient lighting */}
       <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/10 via-transparent to-transparent pointer-events-none" />
 
-      {/* SVG Stylized Developer Avatar */}
-      <svg
-        viewBox="0 0 320 320"
-        className="w-full h-full max-w-[280px] max-h-[280px] drop-shadow-xl"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <linearGradient id="avatarGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="50%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-          <linearGradient id="avatarFace" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#fed7aa" />
-            <stop offset="100%" stopColor="#fba67d" />
-          </linearGradient>
-          <linearGradient id="avatarShirt" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e293b" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </linearGradient>
-        </defs>
+      {/* Edit Avatar Trigger Button */}
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="absolute top-3 right-3 z-20 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:text-white text-xs font-medium flex items-center gap-1.5 backdrop-blur-md transition-all shadow-md active:scale-95"
+          title="Cập nhật ảnh đại diện"
+        >
+          <Camera className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden sm:inline text-[11px]">Đổi ảnh</span>
+        </button>
+      )}
 
-        {/* Subtle decorative tech rings */}
-        <circle cx="160" cy="160" r="140" stroke="url(#avatarGlow)" strokeWidth="1.5" strokeDasharray="6 6" opacity="0.4" />
-        <circle cx="160" cy="160" r="152" stroke="#334155" strokeWidth="1" opacity="0.5" />
+      {avatarUrl ? (
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+          <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full p-1.5 bg-gradient-to-tr from-cyan-400 via-indigo-500 to-sky-300 shadow-2xl shadow-cyan-950/60">
+            <div className="w-full h-full rounded-full overflow-hidden bg-slate-950">
+              <img
+                src={avatarUrl}
+                alt="Developer Avatar"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-900 border border-cyan-800 text-[10px] font-mono text-cyan-300 whitespace-nowrap shadow-md">
+              Full-Stack Eng
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* SVG Stylized Developer Avatar */
+        <svg
+          viewBox="0 0 320 320"
+          className="w-full h-full max-w-[280px] max-h-[280px] drop-shadow-xl"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="avatarGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8" />
+              <stop offset="50%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#06b6d4" />
+            </linearGradient>
+            <linearGradient id="avatarFace" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#fed7aa" />
+              <stop offset="100%" stopColor="#fba67d" />
+            </linearGradient>
+            <linearGradient id="avatarShirt" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e293b" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+          </defs>
 
-        {/* Shoulders & Hoodie */}
-        <path
-          d="M60 300 C60 230 110 200 160 200 C210 200 260 230 260 300 Z"
-          fill="url(#avatarShirt)"
-          stroke="#334155"
-          strokeWidth="2"
-        />
-        {/* Collar line */}
-        <path d="M130 205 L160 235 L190 205" stroke="#475569" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          {/* Subtle decorative tech rings */}
+          <circle cx="160" cy="160" r="140" stroke="url(#avatarGlow)" strokeWidth="1.5" strokeDasharray="6 6" opacity="0.4" />
+          <circle cx="160" cy="160" r="152" stroke="#334155" strokeWidth="1" opacity="0.5" />
 
-        {/* Neck */}
-        <rect x="142" y="165" width="36" height="42" rx="6" fill="#fba67d" />
+          {/* Shoulders & Hoodie */}
+          <path
+            d="M60 300 C60 230 110 200 160 200 C210 200 260 230 260 300 Z"
+            fill="url(#avatarShirt)"
+            stroke="#334155"
+            strokeWidth="2"
+          />
+          {/* Collar line */}
+          <path d="M130 205 L160 235 L190 205" stroke="#475569" strokeWidth="2.5" fill="none" strokeLinecap="round" />
 
-        {/* Head */}
-        <ellipse cx="160" cy="130" rx="46" ry="52" fill="url(#avatarFace)" />
+          {/* Neck */}
+          <rect x="142" y="165" width="36" height="42" rx="6" fill="#fba67d" />
 
-        {/* Stylish Modern Haircut */}
-        <path
-          d="M110 120 C108 90 125 65 160 65 C195 65 212 90 210 120 C204 100 190 92 160 92 C130 92 116 100 110 120 Z"
-          fill="#1e1e24"
-        />
-        <path
-          d="M120 72 C145 55 185 60 200 78 C185 70 145 68 120 72 Z"
-          fill="#334155"
-        />
+          {/* Head */}
+          <ellipse cx="160" cy="130" rx="46" ry="52" fill="url(#avatarFace)" />
 
-        {/* Modern Glasses Frame */}
-        <rect x="122" y="118" width="32" height="22" rx="6" stroke="#0ea5e9" strokeWidth="2.5" fill="#0f172a" fillOpacity="0.3" />
-        <rect x="166" y="118" width="32" height="22" rx="6" stroke="#0ea5e9" strokeWidth="2.5" fill="#0f172a" fillOpacity="0.3" />
-        <line x1="154" y1="128" x2="166" y2="128" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="112" y1="126" x2="122" y2="126" stroke="#0ea5e9" strokeWidth="2.5" />
-        <line x1="198" y1="126" x2="208" y2="126" stroke="#0ea5e9" strokeWidth="2.5" />
+          {/* Stylish Modern Haircut */}
+          <path
+            d="M110 120 C108 90 125 65 160 65 C195 65 212 90 210 120 C204 100 190 92 160 92 C130 92 116 100 110 120 Z"
+            fill="#1e1e24"
+          />
+          <path
+            d="M120 72 C145 55 185 60 200 78 C185 70 145 68 120 72 Z"
+            fill="#334155"
+          />
 
-        {/* Friendly smile */}
-        <path d="M148 156 Q160 166 172 156" stroke="#9a3412" strokeWidth="2" strokeLinecap="round" fill="none" />
+          {/* Modern Glasses Frame */}
+          <rect x="122" y="118" width="32" height="22" rx="6" stroke="#0ea5e9" strokeWidth="2.5" fill="#0f172a" fillOpacity="0.3" />
+          <rect x="166" y="118" width="32" height="22" rx="6" stroke="#0ea5e9" strokeWidth="2.5" fill="#0f172a" fillOpacity="0.3" />
+          <line x1="154" y1="128" x2="166" y2="128" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="112" y1="126" x2="122" y2="126" stroke="#0ea5e9" strokeWidth="2.5" />
+          <line x1="198" y1="126" x2="208" y2="126" stroke="#0ea5e9" strokeWidth="2.5" />
 
-        {/* Headphones band */}
-        <path d="M106 130 C104 90 120 75 160 75 C200 75 216 90 214 130" stroke="#64748b" strokeWidth="3" fill="none" />
-        <rect x="102" y="120" width="10" height="28" rx="4" fill="#0284c7" />
-        <rect x="208" y="120" width="10" height="28" rx="4" fill="#0284c7" />
+          {/* Friendly smile */}
+          <path d="M148 156 Q160 166 172 156" stroke="#9a3412" strokeWidth="2" strokeLinecap="round" fill="none" />
 
-        {/* Floating Code symbols */}
-        <text x="36" y="90" fill="#38bdf8" fontSize="16" fontFamily="monospace" opacity="0.8">&lt;dev&gt;</text>
-        <text x="240" y="100" fill="#818cf8" fontSize="16" fontFamily="monospace" opacity="0.8">&lt;/&gt;</text>
-        <text x="45" y="240" fill="#34d399" fontSize="14" fontFamily="monospace" opacity="0.7">git:main</text>
-        <text x="235" y="235" fill="#f43f5e" fontSize="13" fontFamily="monospace" opacity="0.7">CI/CD ✓</text>
-      </svg>
+          {/* Headphones band */}
+          <path d="M106 130 C104 90 120 75 160 75 C200 75 216 90 214 130" stroke="#64748b" strokeWidth="3" fill="none" />
+          <rect x="102" y="120" width="10" height="28" rx="4" fill="#0284c7" />
+          <rect x="208" y="120" width="10" height="28" rx="4" fill="#0284c7" />
+
+          {/* Floating Code symbols */}
+          <text x="36" y="90" fill="#38bdf8" fontSize="16" fontFamily="monospace" opacity="0.8">&lt;dev&gt;</text>
+          <text x="240" y="100" fill="#818cf8" fontSize="16" fontFamily="monospace" opacity="0.8">&lt;/&gt;</text>
+          <text x="45" y="240" fill="#34d399" fontSize="14" fontFamily="monospace" opacity="0.7">git:main</text>
+          <text x="235" y="235" fill="#f43f5e" fontSize="13" fontFamily="monospace" opacity="0.7">CI/CD ✓</text>
+        </svg>
+      )}
     </div>
   );
 }

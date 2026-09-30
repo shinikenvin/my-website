@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { PERSONAL_INFO } from '../data/portfolioData';
 import { DeveloperPortrait } from './Artwork';
-import { ArrowDown, Terminal, Send, Copy, Check, Sparkles, ExternalLink } from 'lucide-react';
+import { ArrowDown, Terminal, Copy, Check } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 
 interface HeroProps {
   onExploreProjects: () => void;
   onOpenCiCd: () => void;
-  onOpenContact: () => void;
+  onOpenContact?: () => void;
 }
 
-export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps) {
+export function Hero({ onExploreProjects, onOpenCiCd }: HeroProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const { personalInfo } = usePortfolioData();
+  const { t } = useLanguage();
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText(PERSONAL_INFO.email);
+    navigator.clipboard.writeText(personalInfo.email);
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
   };
@@ -35,25 +38,24 @@ export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              <span className="text-emerald-400 font-medium">{PERSONAL_INFO.status}</span>
+              <span className="text-emerald-400 font-medium">{t.hero.statusBadge}</span>
               <span className="text-slate-600" aria-hidden="true">·</span>
-              <span className="text-slate-400">{PERSONAL_INFO.location}</span>
+              <span className="text-slate-400">{personalInfo.location}</span>
             </div>
 
             {/* Display Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-white leading-[1.15] text-balance">
-              Thiết kế web hiện đại, <br />
+              {t.hero.titlePrefix}, <br />
               <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-                hiệu năng mượt mà
+                {t.hero.titleHighlight}
               </span> <br />
-              & tự động hóa CI/CD.
+              {t.hero.titleSuffix}
             </h1>
 
             {/* Bio statement */}
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl">
-              Tôi là <strong className="text-white font-semibold">{PERSONAL_INFO.name}</strong>, một {PERSONAL_INFO.role}. 
-              Tôi chuyên kiến tạo các trải nghiệm web phản hồi tức thì với React, Tailwind CSS và Framer Motion, 
-              đồng thời thiết lập luồng triển khai tự động lên GitHub Pages không gián đoạn.
+              Chào bạn, tôi là <strong className="text-white font-semibold">{personalInfo.name}</strong>, một {personalInfo.role}. 
+              Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.
             </p>
 
             {/* Key Action Buttons */}
@@ -62,17 +64,16 @@ export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps
                 onClick={onExploreProjects}
                 className="px-5 py-2.5 text-sm font-semibold text-slate-950 bg-cyan-400 rounded-lg hover:bg-cyan-300 transition-colors shadow-lg shadow-cyan-950/40 flex items-center gap-2 whitespace-nowrap active:scale-[0.98]"
               >
-                <span>Xem dự án tiêu biểu</span>
+                <span>{t.hero.ctaProjects}</span>
                 <ArrowDown className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={onOpenCiCd}
+              <a
+                href="#contact"
                 className="px-4 py-2.5 text-sm font-medium text-slate-200 bg-slate-900 border border-slate-700/80 rounded-lg hover:bg-slate-850 hover:border-slate-600 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
-                <Terminal className="w-4 h-4 text-cyan-400" />
-                <span>Xem CI/CD GitHub Actions</span>
-              </button>
+                <span>{t.nav.contact}</span>
+              </a>
 
               <button
                 onClick={handleCopyEmail}
@@ -82,29 +83,54 @@ export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps
                 {copiedEmail ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400">Đã sao chép email!</span>
+                    <span className="text-emerald-400">Copied!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 text-slate-400" />
-                    <span>Shinikenvin@gmail.com</span>
+                    <span>{personalInfo.email}</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Adjacent Quantitative Proof Metrics (Section 1.H Rule) */}
+            {/* Adjacent Quantitative Proof Metrics */}
             <div className="pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {PERSONAL_INFO.stats.map((stat, idx) => (
-                <div key={idx} className="space-y-0.5">
-                  <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums tracking-tight">
-                    {stat.value}
-                  </div>
-                  <div className="text-xs text-slate-400 font-normal leading-snug">
-                    {stat.label}
-                  </div>
+              <div className="space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums tracking-tight">
+                  4+
                 </div>
-              ))}
+                <div className="text-xs text-slate-400 font-normal leading-snug">
+                  {t.hero.yearsExp}
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums tracking-tight">
+                  25+
+                </div>
+                <div className="text-xs text-slate-400 font-normal leading-snug">
+                  {t.hero.completedProjects}
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums tracking-tight">
+                  99.9%
+                </div>
+                <div className="text-xs text-slate-400 font-normal leading-snug">
+                  {t.hero.serviceUptime}
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono tabular-nums tracking-tight">
+                  100%
+                </div>
+                <div className="text-xs text-slate-400 font-normal leading-snug">
+                  GitHub CI/CD
+                </div>
+              </div>
             </div>
 
           </div>
@@ -113,8 +139,11 @@ export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps
           <div className="lg:col-span-5 flex flex-col items-center">
             <div className="w-full max-w-[380px] space-y-4">
               
-              {/* Stylized Developer Avatar */}
-              <DeveloperPortrait className="w-full h-[320px]" />
+              {/* Developer Avatar (Managed exclusively via Admin CMS) */}
+              <DeveloperPortrait 
+                className="w-full h-[320px]" 
+                avatarUrl={personalInfo.avatarUrl}
+              />
 
               {/* Terminal Quick Card */}
               <div className="w-full rounded-xl bg-slate-900/90 border border-slate-800 p-4 font-mono text-xs space-y-2 text-slate-300 shadow-xl">
@@ -123,9 +152,9 @@ export function Hero({ onExploreProjects, onOpenCiCd, onOpenContact }: HeroProps
                   <span>zsh · 60 FPS</span>
                 </div>
                 <div className="space-y-1 text-slate-400">
-                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">target:</span> <a href="https://shinikenvin.github.io/my-website/" target="_blank" rel="noreferrer" className="text-slate-200 underline hover:text-cyan-400">shinikenvin.github.io/my-website/</a></p>
-                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">tech:</span> React 19, Tailwind CSS, Framer Motion</p>
-                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">ci_cd:</span> GitHub Actions v4 (Pages Artifacts)</p>
+                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">target:</span> <a href={personalInfo.website} target="_blank" rel="noreferrer" className="text-slate-200 underline hover:text-cyan-400">shinikenvin.github.io/my-website/</a></p>
+                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">tech:</span> React 19, Tailwind CSS, Vite</p>
+                  <p><span className="text-emerald-400">➜</span> <span className="text-cyan-300">ci_cd:</span> GitHub Actions (Pages Artifacts)</p>
                 </div>
               </div>
 

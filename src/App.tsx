@@ -14,15 +14,24 @@ import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { ProjectModal } from './components/ProjectModal';
 import { BlogModal } from './components/BlogModal';
-import { CiCdModal } from './components/CiCdModal';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminDashboardModal } from './components/AdminDashboardModal';
+import { LiveChatWidget } from './components/LiveChatWidget';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, ArrowUpRight } from 'lucide-react';
+import { Shield, ShieldCheck } from 'lucide-react';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { PortfolioDataProvider } from './context/PortfolioDataContext';
 
-export default function App() {
+function PortfolioMain() {
   const [activeSection, setActiveSection] = useState('hero');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
-  const [isCiCdOpen, setIsCiCdOpen] = useState(false);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+
+  const { t } = useLanguage();
+  const { user, isAdmin } = useAuth();
 
   // Scroll spy to update active navigation tab based on scroll position
   useEffect(() => {
@@ -52,58 +61,77 @@ export default function App() {
     }
   };
 
+  const handleOpenAdmin = () => {
+    if (isAdmin) {
+      setIsAdminDashboardOpen(true);
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500/20 selection:text-cyan-300 font-sans antialiased relative">
       
-      {/* Top Bar Navigation */}
+      {/* Top Navbar */}
       <Navbar
         activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        onOpenCiCd={() => setIsCiCdOpen(true)}
+        setActiveSection={scrollToSection}
+        onOpenCiCd={() => {}}
+        onOpenAdmin={handleOpenAdmin}
       />
 
-      {/* Main Content with subtle stagger animation */}
-      <motion.main
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="flex-grow flex flex-col"
-      >
-        {/* Hero Section */}
-        <Hero
+      {/* Main Content Sections */}
+      <main className="relative">
+        <Hero 
           onExploreProjects={() => scrollToSection('projects')}
-          onOpenCiCd={() => setIsCiCdOpen(true)}
+          onOpenCiCd={() => {}}
           onOpenContact={() => scrollToSection('contact')}
         />
 
-        {/* Projects Section */}
-        <ProjectsSection onSelectProject={(project) => setSelectedProject(project)} />
+        <ProjectsSection 
+          onSelectProject={(project) => setSelectedProject(project)}
+        />
 
-        {/* Blog Section */}
-        <BlogSection onSelectPost={(post) => setSelectedPost(post)} />
+        <BlogSection 
+          onSelectPost={(post) => setSelectedPost(post)}
+        />
 
-        {/* About & Skills Section */}
         <AboutSection />
 
-        {/* Contact Section */}
         <ContactSection />
-      </motion.main>
+      </main>
 
       {/* Footer */}
-      <Footer onOpenCiCd={() => setIsCiCdOpen(true)} />
+      <Footer onOpenCiCd={() => {}} />
 
-      {/* Floating GitHub Actions CI/CD trigger shortcut */}
-      <aside aria-label="CI/CD Quick Trigger" className="fixed bottom-5 right-5 z-30">
+      {/* Discreet Admin Quick Button bottom-left */}
+      <aside aria-label="Admin Trigger" className="fixed bottom-5 left-5 z-30">
         <button
-          onClick={() => setIsCiCdOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900/90 text-cyan-300 border border-cyan-800/80 hover:bg-slate-850 hover:border-cyan-500 shadow-xl shadow-slate-950/80 backdrop-blur-md transition-all text-xs font-mono group active:scale-95"
-          title="Mở hướng dẫn & lệnh triển khai CI/CD GitHub Actions"
+          onClick={handleOpenAdmin}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border shadow-xl backdrop-blur-md transition-all text-xs font-mono active:scale-95 ${
+            isAdmin
+              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700/80 hover:bg-emerald-900/90'
+              : 'bg-slate-900/90 text-slate-300 border-slate-700/80 hover:bg-slate-800 hover:text-white'
+          }`}
+          title={isAdmin ? 'Mở Bảng Quản Trị Hệ Thống (CMS)' : 'Đăng nhập Quản Trị Viên (Admin)'}
         >
-          <span className="w-2 h-2 rounded-full bg-cyan-400 group-hover:animate-ping" />
-          <Terminal className="w-4 h-4 text-cyan-400" />
-          <span className="hidden sm:inline font-sans font-medium">GitHub CI/CD</span>
+          {isAdmin ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="font-sans font-semibold">CMS Admin</span>
+            </>
+          ) : (
+            <>
+              <Shield className="w-4 h-4 text-cyan-400" />
+              <span className="font-sans">Admin</span>
+            </>
+          )}
         </button>
       </aside>
+
+      {/* Live Online Chat Widget (Bottom-Right, PC & Mobile Responsive) */}
+      <LiveChatWidget />
 
       {/* Modals & Overlays */}
       <AnimatePresence>
@@ -124,15 +152,34 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {isCiCdOpen && (
-          <CiCdModal
-            isOpen={isCiCdOpen}
-            onClose={() => setIsCiCdOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Admin Login Modal */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onSuccess={() => {
+          setIsAdminLoginOpen(false);
+          setIsAdminDashboardOpen(true);
+        }}
+      />
+
+      {/* Admin Dashboard Modal */}
+      <AdminDashboardModal
+        isOpen={isAdminDashboardOpen}
+        onClose={() => setIsAdminDashboardOpen(false)}
+      />
 
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <PortfolioDataProvider>
+        <LanguageProvider>
+          <PortfolioMain />
+        </LanguageProvider>
+      </PortfolioDataProvider>
+    </AuthProvider>
   );
 }
