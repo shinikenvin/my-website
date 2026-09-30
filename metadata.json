@@ -1,0 +1,6 @@
+{
+  "name": "Shinikenvin Portfolio",
+  "description": "Trang web cá nhân chuyên nghiệp của Shinikenvin với giới thiệu, dự án, blog công nghệ và CI/CD GitHub Actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

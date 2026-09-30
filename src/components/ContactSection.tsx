@@ -1,0 +1,304 @@
+import React, { useState } from 'react';
+import { PERSONAL_INFO } from '../data/portfolioData';
+import { Mail, Github, Send, Copy, Check, CheckCircle2, User, Phone, Globe, Download } from 'lucide-react';
+
+export function ContactSection() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: 'Trao đổi cơ hội hợp tác dự án',
+    message: '',
+  });
+
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText(PERSONAL_INFO.email);
+    setCopiedEmail(true);
+    setTimeout(() => setCopiedEmail(false), 2200);
+  };
+
+  const handleDownloadVCard = () => {
+    const vCardContent = `BEGIN:VCARD
+VERSION:3.0
+N:Shinikenvin;;;;
+FN:Shinikenvin
+TITLE:Full-Stack Software Engineer
+EMAIL;TYPE=INTERNET,PREF:Shinikenvin@gmail.com
+URL;TYPE=WORK:https://shinikenvin.github.io/my-website/
+NOTE:Chuyên phát triển Web App cao cấp, tối ưu hóa Frontend và tự động hóa CI/CD GitHub Actions.
+END:VCARD`;
+
+    const blob = new Blob([vCardContent], { type: 'text/vcard' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Shinikenvin-Contact.vcf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      setErrorMsg('Vui lòng điền đầy đủ các thông tin trước khi gửi.');
+      return;
+    }
+
+    if (!formData.email.includes('@')) {
+      setErrorMsg('Địa chỉ email không hợp lệ.');
+      return;
+    }
+
+    setErrorMsg('');
+    setSubmitting(true);
+
+    // Simulate sending message
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted(true);
+      setFormData({
+        name: '',
+        email: '',
+        subject: 'Trao đổi cơ hội hợp tác dự án',
+        message: '',
+      });
+      setTimeout(() => setSubmitted(false), 5000);
+    }, 900);
+  };
+
+  return (
+    <section id="contact" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        
+        {/* Section Header */}
+        <div className="space-y-2 mb-12">
+          <div className="text-xs font-mono text-cyan-400">
+            04. Kết nối &amp; Hợp tác
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Liên Hệ Trực Tiếp Với Tôi
+          </h2>
+          <p className="text-sm text-slate-400 max-w-xl">
+            Bạn đang có ý tưởng dự án cần hiện thực hóa, muốn tối ưu hóa hệ thống hiện tại hoặc thảo luận về cơ hội làm việc? Đừng ngần ngại nhắn cho tôi.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          
+          {/* Left Column: Direct Info Cards */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+              <h3 className="text-base font-bold text-white">
+                Kênh liên lạc chính thức
+              </h3>
+              
+              <div className="space-y-3 text-xs sm:text-sm">
+                {/* Email card with copy */}
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-cyan-950 text-cyan-400">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-mono">Email cá nhân</div>
+                      <a href={`mailto:${PERSONAL_INFO.email}`} className="text-slate-200 hover:text-cyan-400 font-medium transition-colors">
+                        {PERSONAL_INFO.email}
+                      </a>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCopyEmail}
+                    className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                    title="Sao chép email"
+                  >
+                    {copiedEmail ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* GitHub link */}
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-slate-900 text-slate-300">
+                      <Github className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-mono">GitHub Profile</div>
+                      <a 
+                        href={PERSONAL_INFO.github} 
+                        target="_blank" 
+                        rel="noreferrer noopener"
+                        className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
+                      >
+                        github.com/shinikenvin
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Website URL */}
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-mono">Website Hosting</div>
+                      <a 
+                        href={PERSONAL_INFO.website} 
+                        target="_blank" 
+                        rel="noreferrer noopener"
+                        className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
+                      >
+                        shinikenvin.github.io/my-website
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download vCard action */}
+              <button
+                onClick={handleDownloadVCard}
+                className="w-full py-2.5 px-4 text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 hover:text-white border border-slate-700/60 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Lưu danh bạ liên hệ (.vcf)</span>
+              </button>
+            </div>
+
+            {/* Quick response commitment */}
+            <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 space-y-1">
+              <span className="font-semibold text-slate-200">Thời gian phản hồi thông thường:</span>
+              <p>Thường phản hồi trong vòng 2 – 6 giờ làm việc qua email.</p>
+            </div>
+
+          </div>
+
+          {/* Right Column: Interactive Contact Form */}
+          <div className="lg:col-span-7">
+            <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 relative">
+              
+              {submitted ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-14 h-14 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Tin nhắn đã được gửi thành công!</h3>
+                  <p className="text-xs sm:text-sm text-slate-300 max-w-md">
+                    Cảm ơn bạn đã liên hệ. Tôi sẽ kiểm tra hộp thư và phản hồi lại sớm nhất qua email của bạn.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <h3 className="text-base font-bold text-white">
+                    Gửi tin nhắn trực tiếp
+                  </h3>
+
+                  {errorMsg && (
+                    <div className="p-3 text-xs text-rose-300 bg-rose-950/40 border border-rose-800/60 rounded-lg">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-300">
+                        Họ và tên của bạn <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Nguyễn Văn A"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-300">
+                        Địa chỉ Email nhận phản hồi <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="email@example.com"
+                        className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-300">
+                      Mục đích trao đổi
+                    </label>
+                    <select
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
+                    >
+                      <option value="Trao đổi cơ hội hợp tác dự án">Trao đổi cơ hội hợp tác dự án</option>
+                      <option value="Cần tư vấn kiến trúc Frontend & CI/CD">Cần tư vấn kiến trúc Frontend &amp; CI/CD</option>
+                      <option value="Tuyển dụng vị trí Full-Stack / Frontend">Tuyển dụng vị trí Full-Stack / Frontend</option>
+                      <option value="Kết nối & Chia sẻ công nghệ">Kết nối &amp; Chia sẻ công nghệ</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="font-medium text-slate-300">
+                        Nội dung tin nhắn <span className="text-rose-400">*</span>
+                      </label>
+                      <span className="font-mono text-slate-500 tabular-nums">
+                        {formData.message.length}/1000
+                      </span>
+                    </div>
+                    <textarea
+                      rows={5}
+                      maxLength={1000}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder="Mô tả tóm tắt nhu cầu dự án hoặc nội dung bạn muốn trao đổi..."
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors resize-none"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-3 px-4 text-xs sm:text-sm font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                        <span>Đang gửi thông điệp...</span>
+                      </span>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Gửi thông điệp ngay</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  );
+}
