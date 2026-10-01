@@ -199,56 +199,14 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
         {/* Content */}
         <div className="p-6 space-y-5">
-          {/* Mode Switcher Tabs matching the exact user flow: Admin -> Khởi tạo tài khoản Admin */}
-          {(mode === 'login' || mode === 'register') && (
-            <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setError(null);
-                  setSuccessMsg(null);
-                  setPassword('');
-                  if (passwordInputRef.current) passwordInputRef.current.value = '';
-                }}
-                className={`py-2 px-3 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 ${
-                  mode === 'login'
-                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Đăng Nhập</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('register');
-                  setError(null);
-                  setSuccessMsg(null);
-                  setPassword('');
-                  if (passwordInputRef.current) passwordInputRef.current.value = '';
-                }}
-                className={`py-2 px-3 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 ${
-                  mode === 'register'
-                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Khởi tạo tài khoản Admin</span>
-              </button>
-            </div>
-          )}
-
-          {/* Helper Banner for first-time account initialization */}
-          {mode === 'register' && (
+          {/* First-time setup banner ONLY if database is NOT configured yet */}
+          {!isConfigured && mode === 'register' && (
             <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-xs text-cyan-300 flex items-start gap-2.5 leading-relaxed">
               <UserCheck className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <strong className="text-white font-semibold">Khởi tạo tài khoản lần đầu:</strong>
+                <strong className="text-white font-semibold">Khởi tạo tài khoản quản trị lần đầu tiên:</strong>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Nhập mật khẩu mong muốn để tạo tài khoản quản trị đầu tiên cho hệ thống Portfolio CMS.
+                  Hệ thống chưa có tài khoản admin. Vui lòng đặt mật khẩu ban đầu để bảo vệ quyền truy cập CMS.
                 </p>
               </div>
             </div>
@@ -260,29 +218,21 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-900/60">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setMode('register');
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <KeyRound className="w-3 h-3 text-cyan-400" />
-                  <span>Đặt lại mật khẩu mới ngay</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setMode('forgot');
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors cursor-pointer"
-                >
-                  <span>Quên mật khẩu? (Nhận mã OTP)</span>
-                </button>
-              </div>
+              {mode === 'login' && (
+                <div className="flex items-center gap-2 pt-1 border-t border-rose-900/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setMode('forgot');
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <KeyRound className="w-3 h-3 text-cyan-400" />
+                    <span>Quên mật khẩu? (Nhận mã xác thực OTP)</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -550,17 +500,21 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             {mode === 'login' && (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('register');
-                    setError(null);
-                    setSuccessMsg(null);
-                  }}
-                  className="hover:text-cyan-300 transition-colors"
-                >
-                  Khởi tạo tài khoản Admin
-                </button>
+                {!isConfigured ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('register');
+                      setError(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="hover:text-cyan-300 transition-colors"
+                  >
+                    Khởi tạo tài khoản Admin
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-slate-500">Bảo mật hệ thống Portfolio CMS</span>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -568,7 +522,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="hover:text-cyan-300 transition-colors"
+                  className="hover:text-cyan-300 transition-colors ml-auto"
                 >
                   Quên mật khẩu?
                 </button>

@@ -89,6 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(`Chỉ email quản trị viên ủy quyền (${DEFAULT_ADMIN_EMAIL}) mới được phép tạo tài khoản.`);
     }
 
+    // Guard: Only allow initialization if admin account does NOT exist yet!
+    const adminDoc = await getDoc(doc(db, 'admin', 'auth_settings'));
+    if (adminDoc.exists() && adminDoc.data()?.passwordHash) {
+      throw new Error('Tài khoản quản trị đã được khởi tạo trước đó. Không thể khởi tạo lại. Vui lòng đăng nhập hoặc sử dụng Quên mật khẩu.');
+    }
+
     const passwordHash = await hashPassword(rawPass);
 
     const authData = {
