@@ -147,6 +147,10 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+      if (typeof window !== 'undefined' && err.message?.includes('không chính xác')) {
+        localStorage.removeItem('admin_saved_password');
+        setSavedPasswordExists(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -251,9 +255,34 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
           )}
 
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/80 text-xs text-rose-300 flex items-start gap-2 leading-relaxed">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300 space-y-2.5 leading-relaxed">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-900/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setMode('register');
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <KeyRound className="w-3 h-3 text-cyan-400" />
+                  <span>Đặt lại mật khẩu mới ngay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setMode('forgot');
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors cursor-pointer"
+                >
+                  <span>Quên mật khẩu? (Nhận mã OTP)</span>
+                </button>
+              </div>
             </div>
           )}
 
