@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SKILL_GROUPS } from '../data/portfolioData';
-import { Briefcase, Code2, Sparkles, CheckCircle2, Edit3, Plus, Shield } from 'lucide-react';
+import { Briefcase, Code2, Sparkles, CheckCircle2, Edit3, Plus, Shield, Trash2, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePortfolioData } from '../context/PortfolioDataContext';
 import { useAuth } from '../context/AuthContext';
+import { ExperienceItem } from '../types';
+import { ExperienceEditModal } from './ExperienceEditModal';
 
 interface AboutSectionProps {
   onOpenAdminExperience?: (experienceId?: string) => void;
@@ -11,11 +13,28 @@ interface AboutSectionProps {
 
 export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
   const { t } = useLanguage();
-  const { experiences } = usePortfolioData();
+  const { experiences, deleteExperience } = usePortfolioData();
   const { isAdmin } = useAuth();
 
+  const [editingExperience, setEditingExperience] = useState<ExperienceItem | null | undefined>(undefined);
+  const [expToDelete, setExpToDelete] = useState<ExperienceItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteExpConfirm = async () => {
+    if (!expToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      await deleteExperience(expToDelete.id);
+      setExpToDelete(null);
+    } catch (err: any) {
+      alert(`Lỗi khi xóa kinh nghiệm: ${err.message || 'Vui lòng thử lại'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <section id="about" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950/70">
+    <section id="about" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950/70 relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-16">
         
         {/* Section Header */}
@@ -26,12 +45,12 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
             </div>
             {isAdmin && (
               <button
-                onClick={() => onOpenAdminExperience?.()}
-                className="px-3 py-1 text-xs font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 hover:border-cyan-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                type="button"
+                onClick={() => setEditingExperience(null)}
+                className="px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-md shadow-cyan-950/40 flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
               >
-                <Shield className="w-3 h-3 text-cyan-400" />
-                <Edit3 className="w-3 h-3" />
-                <span>Admin: Chỉnh sửa kinh nghiệm</span>
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>+ Thêm Vị Trí Kinh Nghiệm</span>
               </button>
             )}
           </div>
@@ -90,8 +109,9 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
 
             {isAdmin && (
               <button
-                onClick={() => onOpenAdminExperience?.()}
-                className="px-3 py-1.5 text-xs text-cyan-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-500 rounded-lg transition-colors flex items-center gap-1.5"
+                type="button"
+                onClick={() => setEditingExperience(null)}
+                className="px-3 py-1.5 text-xs text-cyan-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-500 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Thêm vị trí kinh nghiệm</span>
@@ -106,19 +126,31 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
                 <div className="absolute -left-[31px] sm:-left-[39px] top-1 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-cyan-400 group-hover:scale-125 transition-transform" />
 
                 <div className="space-y-3 p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 hover:border-slate-700 transition-colors relative">
-                  {/* Admin Edit button on item */}
+                  {/* Admin Inline Controls on item */}
                   {isAdmin && (
-                    <button
-                      onClick={() => onOpenAdminExperience?.(exp.id)}
-                      className="absolute top-4 right-4 px-2.5 py-1 text-xs text-cyan-300 hover:text-white bg-slate-950/90 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-400 rounded-lg flex items-center gap-1 transition-colors"
-                      title="Chỉnh sửa mục kinh nghiệm này"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                      <span>Sửa</span>
-                    </button>
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingExperience(exp)}
+                        className="px-2.5 py-1 text-xs text-cyan-300 hover:text-white bg-slate-950/90 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-400 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Chỉnh sửa mục kinh nghiệm này trực tiếp"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Sửa</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpToDelete(exp)}
+                        className="px-2.5 py-1 text-xs text-rose-300 hover:text-white bg-slate-950/90 hover:bg-rose-900/40 border border-rose-800/60 hover:border-rose-400 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Xóa mục kinh nghiệm này"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Xóa</span>
+                      </button>
+                    </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pr-16 sm:pr-20">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pr-24 sm:pr-28">
                     <div>
                       <h4 className="text-base sm:text-lg font-bold text-white">
                         {exp.role}
@@ -213,6 +245,66 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
         </div>
 
       </div>
+
+      {/* Dedicated Direct Experience Edit Modal */}
+      <ExperienceEditModal
+        isOpen={editingExperience !== undefined}
+        onClose={() => setEditingExperience(undefined)}
+        experience={editingExperience}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {expToDelete && (
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => !isDeleting && setExpToDelete(null)}
+        >
+          <div 
+            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-2.5 rounded-xl bg-rose-950/70 border border-rose-800/80 text-rose-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-white">Xác nhận xóa kinh nghiệm</h4>
+                <p className="text-[11px] text-slate-400">Thao tác dành cho Quản trị viên</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Bạn có chắc chắn muốn xóa vị trí <strong className="text-white font-semibold">"{expToDelete.role} tại {expToDelete.company}"</strong> không? Thông tin này sẽ bị xóa khỏi cơ sở dữ liệu và không thể hoàn tác.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setExpToDelete(null)}
+                className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteExpConfirm}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-md shadow-rose-950/40"
+              >
+                {isDeleting ? (
+                  <span>Đang xóa...</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xác nhận xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -32,6 +32,8 @@ function PortfolioMain() {
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<'profile' | 'projects' | 'blog' | 'experience' | 'messages' | 'livechat' | 'security'>('profile');
   const [adminTargetExperienceId, setAdminTargetExperienceId] = useState<string | null>(null);
+  const [adminTargetProjectId, setAdminTargetProjectId] = useState<string | null>(null);
+  const [adminTargetBlogId, setAdminTargetBlogId] = useState<string | null>(null);
   const [isCiCdOpen, setIsCiCdOpen] = useState(false);
 
   const { t } = useLanguage();
@@ -68,6 +70,32 @@ function PortfolioMain() {
   const handleOpenAdmin = (tab: 'profile' | 'projects' | 'blog' | 'experience' | 'messages' | 'livechat' | 'security' = 'profile') => {
     setAdminInitialTab(tab);
     setAdminTargetExperienceId(null);
+    setAdminTargetProjectId(null);
+    setAdminTargetBlogId(null);
+    if (isAdmin) {
+      setIsAdminDashboardOpen(true);
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
+
+  const handleOpenAdminProject = (projectId?: string) => {
+    setAdminInitialTab('projects');
+    setAdminTargetProjectId(projectId || 'new');
+    setAdminTargetExperienceId(null);
+    setAdminTargetBlogId(null);
+    if (isAdmin) {
+      setIsAdminDashboardOpen(true);
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
+
+  const handleOpenAdminBlog = (blogId?: string) => {
+    setAdminInitialTab('blog');
+    setAdminTargetBlogId(blogId || 'new');
+    setAdminTargetExperienceId(null);
+    setAdminTargetProjectId(null);
     if (isAdmin) {
       setIsAdminDashboardOpen(true);
     } else {
@@ -78,6 +106,8 @@ function PortfolioMain() {
   const handleOpenAdminExperience = (expId?: string) => {
     setAdminInitialTab('experience');
     setAdminTargetExperienceId(expId || null);
+    setAdminTargetProjectId(null);
+    setAdminTargetBlogId(null);
     if (isAdmin) {
       setIsAdminDashboardOpen(true);
     } else {
@@ -106,10 +136,12 @@ function PortfolioMain() {
 
         <ProjectsSection 
           onSelectProject={(project) => setSelectedProject(project)}
+          onOpenAdminProject={handleOpenAdminProject}
         />
 
         <BlogSection 
           onSelectPost={(post) => setSelectedPost(post)}
+          onOpenAdminBlog={handleOpenAdminBlog}
         />
 
         <AboutSection onOpenAdminExperience={handleOpenAdminExperience} />
@@ -184,9 +216,13 @@ function PortfolioMain() {
         onClose={() => {
           setIsAdminDashboardOpen(false);
           setAdminTargetExperienceId(null);
+          setAdminTargetProjectId(null);
+          setAdminTargetBlogId(null);
         }}
         initialTab={adminInitialTab}
         targetExperienceId={adminTargetExperienceId}
+        targetProjectId={adminTargetProjectId}
+        targetBlogId={adminTargetBlogId}
       />
 
       {/* CI/CD Automation Modal */}

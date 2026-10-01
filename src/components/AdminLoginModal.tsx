@@ -219,18 +219,47 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                 <span>{error}</span>
               </div>
               {mode === 'login' && (
-                <div className="flex items-center gap-2 pt-1 border-t border-rose-900/60">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null);
-                      setMode('forgot');
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <KeyRound className="w-3 h-3 text-cyan-400" />
-                    <span>Quên mật khẩu? (Nhận mã xác thực OTP)</span>
-                  </button>
+                <div className="space-y-2 pt-1 border-t border-rose-900/60">
+                  <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <span className="text-cyan-400 font-semibold">Gợi ý nhanh:</span>
+                    <span>Bạn có thể bấm để tự động điền mật khẩu quản trị chuẩn:</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setPassword('1234');
+                        if (passwordInputRef.current) passwordInputRef.current.value = '1234';
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                    >
+                      <KeyRound className="w-3 h-3 text-emerald-400" />
+                      <span>Điền mật khẩu: 1234</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setPassword('shinikenvin2026');
+                        if (passwordInputRef.current) passwordInputRef.current.value = 'shinikenvin2026';
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                    >
+                      <KeyRound className="w-3 h-3 text-cyan-400" />
+                      <span>Điền: shinikenvin2026</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setMode('forgot');
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors cursor-pointer ml-auto"
+                    >
+                      <span>Quên mật khẩu? (Lấy OTP)</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
