@@ -1,10 +1,18 @@
 import React from 'react';
-import { EXPERIENCE_DATA, SKILL_GROUPS } from '../data/portfolioData';
-import { Briefcase, Code2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { SKILL_GROUPS } from '../data/portfolioData';
+import { Briefcase, Code2, Sparkles, CheckCircle2, Edit3, Plus, Shield } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { usePortfolioData } from '../context/PortfolioDataContext';
+import { useAuth } from '../context/AuthContext';
 
-export function AboutSection() {
+interface AboutSectionProps {
+  onOpenAdminExperience?: (experienceId?: string) => void;
+}
+
+export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
   const { t } = useLanguage();
+  const { experiences } = usePortfolioData();
+  const { isAdmin } = useAuth();
 
   return (
     <section id="about" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950/70">
@@ -12,8 +20,20 @@ export function AboutSection() {
         
         {/* Section Header */}
         <div className="space-y-2">
-          <div className="text-xs font-mono text-cyan-400">
-            03. {t.about.badge}
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-mono text-cyan-400">
+              03. {t.about.badge}
+            </div>
+            {isAdmin && (
+              <button
+                onClick={() => onOpenAdminExperience?.()}
+                className="px-3 py-1 text-xs font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 hover:border-cyan-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Shield className="w-3 h-3 text-cyan-400" />
+                <Edit3 className="w-3 h-3" />
+                <span>Admin: Chỉnh sửa kinh nghiệm</span>
+              </button>
+            )}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             {t.about.title}
@@ -58,23 +78,47 @@ export function AboutSection() {
 
         {/* Experience Timeline */}
         <div className="space-y-8">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-cyan-400">
-              <Briefcase className="w-4 h-4" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-cyan-400">
+                <Briefcase className="w-4 h-4" />
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                {t.about.tabExperience}
+              </h3>
             </div>
-            <h3 className="text-xl font-bold text-white tracking-tight">
-              {t.about.tabExperience}
-            </h3>
+
+            {isAdmin && (
+              <button
+                onClick={() => onOpenAdminExperience?.()}
+                className="px-3 py-1.5 text-xs text-cyan-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-500 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm vị trí kinh nghiệm</span>
+              </button>
+            )}
           </div>
 
           <div className="relative pl-6 sm:pl-8 border-l border-slate-800 space-y-10">
-            {EXPERIENCE_DATA.map((exp, idx) => (
-              <div key={idx} className="relative group">
+            {experiences.map((exp, idx) => (
+              <div key={exp.id || idx} className="relative group">
                 {/* Timeline node */}
                 <div className="absolute -left-[31px] sm:-left-[39px] top-1 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-cyan-400 group-hover:scale-125 transition-transform" />
 
-                <div className="space-y-3 p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 hover:border-slate-700 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="space-y-3 p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 hover:border-slate-700 transition-colors relative">
+                  {/* Admin Edit button on item */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => onOpenAdminExperience?.(exp.id)}
+                      className="absolute top-4 right-4 px-2.5 py-1 text-xs text-cyan-300 hover:text-white bg-slate-950/90 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-400 rounded-lg flex items-center gap-1 transition-colors"
+                      title="Chỉnh sửa mục kinh nghiệm này"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Sửa</span>
+                    </button>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pr-16 sm:pr-20">
                     <div>
                       <h4 className="text-base sm:text-lg font-bold text-white">
                         {exp.role}
@@ -92,20 +136,24 @@ export function AboutSection() {
                     {exp.description}
                   </p>
 
-                  <ul className="space-y-1.5 pt-1">
-                    {exp.highlights.map((h, hIdx) => (
-                      <li key={hIdx} className="flex items-start gap-2 text-xs text-slate-300">
-                        <span className="text-cyan-400 mt-0.5">▸</span>
-                        <span>{h}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {exp.highlights && exp.highlights.length > 0 && (
+                    <ul className="space-y-1.5 pt-1">
+                      {exp.highlights.map((h, hIdx) => (
+                        <li key={hIdx} className="flex items-start gap-2 text-xs text-slate-300">
+                          <span className="text-cyan-400 mt-0.5">▸</span>
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                   {/* Skills tags */}
-                  <div className="pt-2 text-xs text-slate-400 border-t border-slate-800/70">
-                    <span className="text-slate-300 font-medium mr-2">{t.about.tabSkills}:</span>
-                    <span>{exp.skills.join(' · ')}</span>
-                  </div>
+                  {exp.skills && exp.skills.length > 0 && (
+                    <div className="pt-2 text-xs text-slate-400 border-t border-slate-800/70">
+                      <span className="text-slate-300 font-medium mr-2">{t.about.tabSkills}:</span>
+                      <span>{exp.skills.join(' · ')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -18,8 +18,14 @@ export function ContactSection() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText(personalInfo.email);
+  const handleCopyEmail = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(personalInfo.email);
+      }
+    } catch (err) {
+      console.warn('Clipboard copy failed:', err);
+    }
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
   };

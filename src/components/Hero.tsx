@@ -15,8 +15,14 @@ export function Hero({ onExploreProjects, onOpenCiCd }: HeroProps) {
   const { personalInfo } = usePortfolioData();
   const { t } = useLanguage();
 
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText(personalInfo.email);
+  const handleCopyEmail = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(personalInfo.email);
+      }
+    } catch (err) {
+      console.warn('Clipboard copy failed:', err);
+    }
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
   };
@@ -45,17 +51,51 @@ export function Hero({ onExploreProjects, onOpenCiCd }: HeroProps) {
 
             {/* Display Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-white leading-[1.15] text-balance">
-              {t.hero.titlePrefix}, <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-                {t.hero.titleHighlight}
-              </span> <br />
-              {t.hero.titleSuffix}
+              {personalInfo.heroHeadline ? (
+                (() => {
+                  const lines = personalInfo.heroHeadline.split('\n').filter(Boolean);
+                  if (lines.length >= 3) {
+                    return (
+                      <>
+                        {lines[0]} <br />
+                        <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
+                          {lines[1]}
+                        </span> <br />
+                        {lines.slice(2).join(' ')}
+                      </>
+                    );
+                  }
+                  if (lines.length === 2) {
+                    return (
+                      <>
+                        {lines[0]} <br />
+                        <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
+                          {lines[1]}
+                        </span>
+                      </>
+                    );
+                  }
+                  return personalInfo.heroHeadline;
+                })()
+              ) : (
+                <>
+                  {t.hero.titlePrefix}, <br />
+                  <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
+                    {t.hero.titleHighlight}
+                  </span> <br />
+                  {t.hero.titleSuffix}
+                </>
+              )}
             </h1>
 
             {/* Bio statement */}
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl">
-              Chào bạn, tôi là <strong className="text-white font-semibold">{personalInfo.name}</strong>, một {personalInfo.role}. 
-              Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.
+            <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl whitespace-pre-line">
+              {personalInfo.bio || (
+                <>
+                  Chào bạn, tôi là <strong className="text-white font-semibold">{personalInfo.name}</strong>, một {personalInfo.role}. 
+                  Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.
+                </>
+              )}
             </p>
 
             {/* Key Action Buttons */}

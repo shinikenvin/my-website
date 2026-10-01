@@ -9,7 +9,8 @@ export const PERSONAL_INFO = {
   repoUrl: 'https://github.com/shinikenvin/my-website',
   location: 'Việt Nam (Làm việc từ xa & Hybrid)',
   status: 'Sẵn sàng nhận dự án mới & Hợp tác',
-  bio: 'Kỹ sư phần mềm đam mê xây dựng các giao diện người dùng có tính tương tác cao, kiến trúc hệ thống phân tán chịu tải lớn và quy trình tự động hóa CI/CD hiện đại. Luôn hướng tới sự tinh gọn, hiệu năng vượt trội và chuẩn mực thiết kế bền vững.',
+  heroHeadline: 'Kiến tạo trải nghiệm số,\nvới hiệu năng đỉnh cao\n& tư duy sản phẩm chuyên sâu.',
+  bio: 'Chào bạn, tôi là Shinikenvin, một Full-Stack Software Engineer & Creative Developer. Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.',
   stats: [
     { label: 'Năm kinh nghiệm thực chiến', value: '4+' },
     { label: 'Dự án đã bàn giao & triển khai', value: '28+' },
@@ -23,7 +24,7 @@ export const PROJECTS_DATA: Project[] = [
     id: 'nexusflow-orchestrator',
     title: 'NexusFlow Automation Pipeline',
     subtitle: 'Nền tảng tự động hóa quy trình CI/CD & điều phối tác vụ phân tán',
-    description: 'Hệ thống quản lý và kích hoạt pipeline triển khai mã nguồn tự động, tích hợp webhooks từ GitHub/GitLab, giám sát container và phân phối artifact với độ trễ dưới 120ms.',
+    description: 'Hệ thống quản lý và kích hoạt pipeline triển khai mã nguồn tự động, tích hợp webhooks từ GitHub/GitLab, giám sát container và phân phối...',
     category: 'devtools',
     categoryLabel: 'DevOps & Công cụ',
     tags: ['React 19', 'TypeScript', 'Tailwind CSS', 'Docker', 'GitHub API', 'Node.js'],
@@ -58,10 +59,10 @@ export const PROJECTS_DATA: Project[] = [
     id: 'aetheria-creative-studio',
     title: 'Aetheria Creative Engine',
     subtitle: 'Không gian sáng tạo tương tác & biên tập đồ họa thời gian thực',
-    description: 'Ứng dụng web đồ họa tương tác hiệu năng cao với kết xuất GPU, hỗ trợ xử lý hình ảnh vector, bộ lọc shaders tùy chỉnh và xuất bản đa định dạng cho nhà thiết kế.',
+    description: 'Ứng dụng web đồ họa tương tác hiệu năng cao với kết xuất GPU, hỗ trợ xử lý hình ảnh vector, bộ lọc shaders tùy chỉnh và xuất bản đa định dạng...',
     category: 'web',
     categoryLabel: 'Web App & Sáng tạo',
-    tags: ['React', 'Tailwind CSS', 'Framer Motion', 'WebGL', 'Canvas API', 'Vite'],
+    tags: ['React', 'Tailwind CSS', 'Framer Motion', 'WebGL'],
     year: '2025',
     featured: true,
     demoUrl: 'https://shinikenvin.github.io/my-website/',
@@ -93,10 +94,10 @@ export const PROJECTS_DATA: Project[] = [
     id: 'pulsemetrics-dashboard',
     title: 'PulseMetrics Realtime Analytics',
     subtitle: 'Hệ thống giám sát hiệu năng web & telemetry người dùng trực tiếp',
-    description: 'Bảng điều khiển phân tích số liệu thời gian thực theo dõi Core Web Vitals, phân phối lưu lượng truy cập và chỉ số phản hồi server với biểu đồ dữ liệu mượt mà.',
+    description: 'Bảng điều khiển phân tích số liệu thời gian thực theo dõi Core Web Vitals, phân phối lưu lượng truy cập và chỉ số phản hồi server với biểu đồ d...',
     category: 'ai-cloud',
     categoryLabel: 'Cloud & Telemetry',
-    tags: ['TypeScript', 'React 19', 'Tailwind CSS', 'WebSockets', 'Chart.js', 'Go'],
+    tags: ['TypeScript', 'React 19', 'Tailwind CSS', 'WebSockets'],
     year: '2025',
     featured: false,
     demoUrl: 'https://shinikenvin.github.io/my-website/',
@@ -120,74 +121,6 @@ export const PROJECTS_DATA: Project[] = [
         { label: 'Độ trễ cập nhật dữ liệu', value: '< 80ms' },
         { label: 'Sự kiện xử lý mỗi ngày', value: '14.5M' },
         { label: 'Tối ưu băng thông mạng', value: '-72%' }
-      ]
-    }
-  },
-  {
-    id: 'devforge-cli-ecosystem',
-    title: 'DevForge Scaffold CLI & Engine',
-    subtitle: 'Bộ công cụ dòng lệnh tự động hóa khởi tạo dự án chuẩn công nghiệp',
-    description: 'CLI thông minh giúp lập trình viên khởi tạo project chuẩn TypeScript, cấu hình sẵn ESLint, Tailwind, Dockerfile và template GitHub Actions CI/CD chỉ bằng 1 câu lệnh.',
-    category: 'devtools',
-    categoryLabel: 'DevOps & Công cụ',
-    tags: ['Node.js', 'TypeScript', 'GitHub Actions', 'Vite', 'Shell', 'npm'],
-    year: '2024',
-    featured: false,
-    demoUrl: 'https://shinikenvin.github.io/my-website/',
-    githubUrl: 'https://github.com/shinikenvin/my-website',
-    fullCaseStudy: {
-      overview: 'Công cụ CLI sinh ra nhằm loại bỏ hàng giờ thiết lập cấu hình lặp đi lặp lại khi bắt đầu dự án mới cho các nhóm phát triển phần mềm.',
-      challenge: 'Sự khác biệt giữa các môi trường dev của thành viên thường dẫn đến lỗi "chạy được trên máy tôi nhưng lỗi trên server".',
-      solution: 'Chuẩn hóa toàn bộ cấu hình vào các module tái sử dụng, kiểm tra cú pháp nghiêm ngặt và tự động gắn kết pipeline GitHub Pages.',
-      architecture: [
-        'CLI package biên dịch bằng TypeScript hỗ trợ npx chạy tức thì',
-        'Engine sinh file mẫu AST với tính năng dynamic token replacement',
-        'Tích hợp kiểm tra git commit hooks qua Husky và lint-staged'
-      ],
-      keyFeatures: [
-        'Tùy chọn preset chỉ với 3 phím bấm mũi tên trực quan',
-        'Tự động tạo workflow GitHub Pages tương thích 100% với Vite',
-        'Cài đặt tự động các bộ kiểm thử Vitest và Playwright',
-        'Hỗ trợ chế độ offline bằng local templates cache'
-      ],
-      metrics: [
-        { label: 'Lượt tải gói npm', value: '45k+' },
-        { label: 'Thời gian setup dự án', value: '< 25s' },
-        { label: 'Đánh giá GitHub Stars', value: '820+' }
-      ]
-    }
-  },
-  {
-    id: 'zenith-headless-storefront',
-    title: 'Zenith Fast Storefront PWA',
-    subtitle: 'Nền tảng thương mại điện tử siêu tốc độ với kiến trúc Headless',
-    description: 'Trang mua sắm trực tuyến với điểm Google Lighthouse 100/100, hỗ trợ duyệt offline, thanh toán 1 bước và hiệu ứng chuyển đổi sản phẩm không chớp màn hình.',
-    category: 'web',
-    categoryLabel: 'Web App & Sáng tạo',
-    tags: ['React 19', 'PWA', 'Tailwind CSS', 'Edge API', 'Stripe', 'Framer Motion'],
-    year: '2024',
-    featured: false,
-    demoUrl: 'https://shinikenvin.github.io/my-website/',
-    githubUrl: 'https://github.com/shinikenvin/my-website',
-    fullCaseStudy: {
-      overview: 'Trải nghiệm mua sắm hiện đại giải phóng khách hàng khỏi sự chờ đợi tải trang chậm chạp của các giải pháp CMS cũ.',
-      challenge: 'Mỗi 100ms tải trang trễ làm giảm 7% tỷ lệ chuyển đổi đơn hàng và tăng tỷ lệ thoát trang trên điện thoại.',
-      solution: 'Áp dụng kiến trúc Jamstack tĩnh hóa kết hợp Edge Functions và Progressive Web App cho trải nghiệm mượt như ứng dụng native.',
-      architecture: [
-        'Giao diện React với chiến lược Client-side Routing tối ưu prefetching',
-        'Service Worker lưu bộ nhớ đệm thông minh cho các tài nguyên tĩnh',
-        'Tối ưu hóa hình ảnh AVIF/WebP tự động theo độ phân giải màn hình'
-      ],
-      keyFeatures: [
-        'Bộ lọc sản phẩm đa tiêu chí với phản hồi tức thì không cần reload',
-        'Giỏ hàng đồng bộ cục bộ và phục hồi ngay cả khi mất mạng',
-        'Chuyển động slide hình ảnh sản phẩm với cử chỉ ngón tay mượt mà',
-        'Tối ưu hóa SEO chi tiết với Schema Product và Breadcrumbs tự động'
-      ],
-      metrics: [
-        { label: 'Điểm số Lighthouse', value: '100 / 100' },
-        { label: 'Tỉ lệ chuyển đổi đơn', value: '+34%' },
-        { label: 'First Contentful Paint', value: '0.4s' }
       ]
     }
   }
@@ -475,6 +408,8 @@ export function PageContainer({ activeKey, children }: { activeKey: string; chil
 
 export const EXPERIENCE_DATA: ExperienceItem[] = [
   {
+    id: 'exp-techcraft',
+    order: 1,
     company: 'TechCraft Solutions',
     role: 'Senior Full-Stack Engineer / Team Lead',
     period: '2024 — Hiện tại',
@@ -488,6 +423,8 @@ export const EXPERIENCE_DATA: ExperienceItem[] = [
     skills: ['React', 'TypeScript', 'Tailwind CSS', 'Docker', 'GitHub Actions', 'Node.js', 'System Architecture']
   },
   {
+    id: 'exp-vanguard',
+    order: 2,
     company: 'Vanguard Digital Agency',
     role: 'Frontend & Interactive Web Developer',
     period: '2022 — 2024',
@@ -501,6 +438,8 @@ export const EXPERIENCE_DATA: ExperienceItem[] = [
     skills: ['React', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'REST API', 'GraphQL', 'Vite']
   },
   {
+    id: 'exp-opensource',
+    order: 3,
     company: 'OpenSource Labs',
     role: 'Open-Source Contributor & Junior Developer',
     period: '2021 — 2022',

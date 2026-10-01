@@ -46,14 +46,26 @@ export function BlogModal({ post, onClose }: BlogModalProps) {
     }
   };
 
-  const handleCopyCode = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = async (code: string, id: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      }
+    } catch (err) {
+      console.warn('Clipboard writeText failed:', err);
+    }
     setCopiedCodeKey(id);
     setTimeout(() => setCopiedCodeKey(null), 2000);
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const handleShare = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    } catch (err) {
+      console.warn('Clipboard share failed:', err);
+    }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };

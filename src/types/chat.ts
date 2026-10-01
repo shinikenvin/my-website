@@ -20,3 +20,14 @@ export interface ChatMessage {
   readByAdmin?: boolean;
   readByVisitor?: boolean;
 }
+
+export interface CommunityMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderEmail?: string;
+  senderAvatar: string;
+  senderRole: 'visitor' | 'admin';
+  text: string;
+  createdAt: string;
+}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  X, Shield, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle, 
+  X, Shield, ShieldCheck, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle, 
   KeyRound, UserCheck, Copy, Check, Send, Eye, EyeOff, Zap, Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ interface AdminLoginModalProps {
 }
 
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
-  const { login, register, resetPassword, verifyResetCodeAndChangePassword, isConfigured } = useAuth();
+  const { login, quickOwnerLogin, register, resetPassword, verifyResetCodeAndChangePassword, isConfigured } = useAuth();
   
   // Saved credentials state - strictly default to FALSE
   const [savedPasswordExists, setSavedPasswordExists] = useState(false);
@@ -30,45 +30,47 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Strict check on modal open & wipe any browser auto-inserted characters
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const otpInputRef = useRef<HTMLInputElement>(null);
+  const newPasswordInputRef = useRef<HTMLInputElement>(null);
+  const hasInitializedForOpenRef = useRef(false);
+
+  // Initialize ONLY once when modal opens, NEVER wiping user typed input on re-renders
   useEffect(() => {
-    if (!isOpen) return;
-    
-    // Always start with clean empty state so browser auto-inserted characters are discarded
-    setPassword('');
-    setNewPassword('');
-    setOtpCode('');
-    setError(null);
-    setSuccessMsg(null);
+    if (isOpen) {
+      if (!hasInitializedForOpenRef.current) {
+        hasInitializedForOpenRef.current = true;
+        setError(null);
+        setSuccessMsg(null);
+        setOtpCode('');
+        setNewPassword('');
 
-    if (typeof window !== 'undefined') {
-      const rememberPref = localStorage.getItem('admin_remember_password');
-      const isRememberEnabled = rememberPref === 'true';
+        if (typeof window !== 'undefined') {
+          const rememberPref = localStorage.getItem('admin_remember_password') === 'true';
+          setRememberPassword(rememberPref);
 
-      setRememberPassword(isRememberEnabled);
-
-      if (isRememberEnabled) {
-        const savedEmail = localStorage.getItem('admin_saved_email');
-        const savedPass = localStorage.getItem('admin_saved_password');
-        if (savedEmail) setEmail(savedEmail);
-        if (savedPass) {
-          setPassword(savedPass);
-          setSavedPasswordExists(true);
-        } else {
-          setPassword('');
-          setSavedPasswordExists(false);
+          if (rememberPref) {
+            const savedEmail = localStorage.getItem('admin_saved_email');
+            const savedPass = localStorage.getItem('admin_saved_password');
+            if (savedEmail) {
+              setEmail(savedEmail);
+              if (emailInputRef.current) emailInputRef.current.value = savedEmail;
+            }
+            if (savedPass) {
+              setPassword(savedPass);
+              if (passwordInputRef.current) passwordInputRef.current.value = savedPass;
+              setSavedPasswordExists(true);
+            }
+          } else {
+            if (passwordInputRef.current) passwordInputRef.current.value = '';
+          }
         }
-      } else {
-        localStorage.removeItem('admin_saved_password');
-        setPassword('');
-        setSavedPasswordExists(false);
-      }
 
-      if (isConfigured || localStorage.getItem('admin_saved_password')) {
-        setMode('login');
-      } else {
-        setMode('register');
+        setMode(isConfigured ? 'login' : 'register');
       }
+    } else {
+      hasInitializedForOpenRef.current = false;
     }
   }, [isOpen, isConfigured]);
 
@@ -93,6 +95,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     localStorage.removeItem('admin_saved_email');
     localStorage.setItem('admin_remember_password', 'false');
     setPassword('');
+    if (passwordInputRef.current) passwordInputRef.current.value = '';
     setRememberPassword(false);
     setSavedPasswordExists(false);
   };
@@ -103,28 +106,41 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     setSuccessMsg(null);
     setLoading(true);
 
+    const finalEmail = (emailInputRef.current?.value ?? email).trim() || 'Shinikenvin@gmail.com';
+    const finalPass = (passwordInputRef.current?.value ?? password).trim();
+    const finalOtp = (otpInputRef.current?.value ?? otpCode).trim();
+    const finalNewPass = (newPasswordInputRef.current?.value ?? newPassword).trim();
+
     try {
       if (mode === 'login') {
-        await login(email, password);
-        handleSaveCredentials(email, password);
-        if (!rememberPassword) setPassword('');
+        await login(finalEmail, finalPass);
+        handleSaveCredentials(finalEmail, finalPass);
+        if (!rememberPassword) {
+          setPassword('');
+          if (passwordInputRef.current) passwordInputRef.current.value = '';
+        }
         onSuccess();
       } else if (mode === 'register') {
-        await register(email, password);
-        handleSaveCredentials(email, password);
-        if (!rememberPassword) setPassword('');
+        await register(finalEmail, finalPass);
+        handleSaveCredentials(finalEmail, finalPass);
+        if (!rememberPassword) {
+          setPassword('');
+          if (passwordInputRef.current) passwordInputRef.current.value = '';
+        }
         onSuccess();
       } else if (mode === 'forgot') {
-        const result = await resetPassword(email);
+        const result = await resetPassword(finalEmail);
         setGeneratedCode(result.code);
         setMode('verify_otp');
         setSuccessMsg(`Mã khôi phục bảo mật đã được tạo cho email ${result.email}. Hãy nhập mã 6 số bên dưới và đặt mật khẩu mới.`);
       } else if (mode === 'verify_otp') {
-        await verifyResetCodeAndChangePassword(otpCode, newPassword);
-        handleSaveCredentials(email, newPassword);
+        await verifyResetCodeAndChangePassword(finalOtp, finalNewPass);
+        handleSaveCredentials(finalEmail, finalNewPass);
         if (!rememberPassword) {
           setPassword('');
           setNewPassword('');
+          if (passwordInputRef.current) passwordInputRef.current.value = '';
+          if (newPasswordInputRef.current) newPasswordInputRef.current.value = '';
         }
         onSuccess();
       }
@@ -145,7 +161,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -179,6 +195,61 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
 
         {/* Content */}
         <div className="p-6 space-y-5">
+          {/* Mode Switcher Tabs matching the exact user flow: Admin -> Khởi tạo tài khoản Admin */}
+          {(mode === 'login' || mode === 'register') && (
+            <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                  setSuccessMsg(null);
+                  setPassword('');
+                  if (passwordInputRef.current) passwordInputRef.current.value = '';
+                }}
+                className={`py-2 px-3 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 ${
+                  mode === 'login'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Đăng Nhập</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('register');
+                  setError(null);
+                  setSuccessMsg(null);
+                  setPassword('');
+                  if (passwordInputRef.current) passwordInputRef.current.value = '';
+                }}
+                className={`py-2 px-3 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 ${
+                  mode === 'register'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Khởi tạo tài khoản Admin</span>
+              </button>
+            </div>
+          )}
+
+          {/* Helper Banner for first-time account initialization */}
+          {mode === 'register' && (
+            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-xs text-cyan-300 flex items-start gap-2.5 leading-relaxed">
+              <UserCheck className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-white font-semibold">Khởi tạo tài khoản lần đầu:</strong>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Nhập mật khẩu mong muốn để tạo tài khoản quản trị đầu tiên cho hệ thống Portfolio CMS.
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/80 text-xs text-rose-300 flex items-start gap-2 leading-relaxed">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -238,49 +309,29 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
           <form 
             onSubmit={handleSubmit} 
             className="space-y-4" 
-            autoComplete="off" 
-            data-lpignore="true" 
-            data-form-type="other"
+            autoComplete="off"
           >
-            {/* Hidden dummy field to completely disarm browser password managers */}
-            <input 
-              type="text" 
-              name="fake_username_remember" 
-              tabIndex={-1} 
-              aria-hidden="true" 
-              style={{ display: 'none' }} 
-              autoComplete="off" 
-            />
-            <input 
-              type="password" 
-              name="fake_password_remember" 
-              tabIndex={-1} 
-              aria-hidden="true" 
-              style={{ display: 'none' }} 
-              autoComplete="off" 
-            />
-
             {mode !== 'verify_otp' && (
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
+                <label htmlFor="admin_user_account" className="text-xs font-medium text-slate-300 flex items-center justify-between cursor-pointer">
                   <span>Email quản trị</span>
                   <span className="text-[11px] font-mono text-cyan-400">Shinikenvin@gmail.com</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none select-none" />
                   <input
+                    ref={emailInputRef}
                     type="email"
                     name="admin_user_account"
                     id="admin_user_account"
-                    value={email}
+                    defaultValue={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Shinikenvin@gmail.com"
                     autoComplete="off"
+                    autoCapitalize="none"
                     autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                    className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                    spellCheck={false}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-sans"
                     required
                   />
                 </div>
@@ -290,8 +341,8 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             {(mode === 'login' || mode === 'register') && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-medium text-slate-300">
-                    {mode === 'register' ? 'Đặt mật khẩu Admin mới (tối thiểu 6 ký tự)' : 'Mật khẩu quản trị'}
+                  <label htmlFor="admin_passcode" className="font-medium text-slate-300 cursor-pointer">
+                    {mode === 'register' ? 'Nhập mật khẩu mong muốn (tối thiểu 4 ký tự)' : 'Mật khẩu quản trị'}
                   </label>
                   {mode === 'login' && (
                     <button
@@ -308,37 +359,41 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  {/* Using text input with WebkitTextSecurity completely prevents Chrome password generator popup */}
+                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none select-none" />
                   <input
+                    key={mode}
+                    ref={passwordInputRef}
                     type="text"
-                    name="admin_auth_passkey"
-                    id="admin_auth_passkey"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    style={{
+                      WebkitTextSecurity: showPassword ? 'none' : 'disc',
+                    } as any}
+                    name="admin_passcode"
+                    id="admin_passcode"
+                    defaultValue={mode === 'login' ? password : ''}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    placeholder={mode === 'register' ? 'Nhập mật khẩu mong muốn...' : 'Nhập mật khẩu quản trị...'}
                     autoComplete="off"
+                    autoCapitalize="none"
                     autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    data-form-type="other"
-                    style={showPassword ? {} : ({ WebkitTextSecurity: 'disc', MozTextSecurity: 'disc' } as any)}
-                    className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono tracking-wider"
+                    spellCheck={false}
+                    className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-sans tracking-normal"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
                     title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                {/* Remember Password Checkbox - Controlled Strictly */}
+                {/* Remember Password Checkbox */}
                 <div className="flex items-center justify-between pt-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300">
                     <input
@@ -364,50 +419,49 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             {mode === 'verify_otp' && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">Nhập mã xác thực 6 số</label>
+                  <label htmlFor="admin_otp_token" className="text-xs font-medium text-slate-300 cursor-pointer">Nhập mã xác thực 6 số</label>
                   <input
+                    ref={otpInputRef}
                     type="text"
                     maxLength={6}
                     name="admin_otp_token"
                     id="admin_otp_token"
-                    value={otpCode}
+                    defaultValue={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
                     placeholder="123456"
                     autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
                     className="w-full text-center py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono tracking-widest"
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+                  <label htmlFor="admin_new_passcode" className="text-xs font-medium text-slate-300 cursor-pointer">Mật khẩu mới (tối thiểu 6 ký tự)</label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none select-none" />
                     <input
+                      ref={newPasswordInputRef}
                       type="text"
-                      name="admin_reset_new_passkey"
-                      id="admin_reset_new_passkey"
-                      value={newPassword}
+                      style={{
+                        WebkitTextSecurity: showPassword ? 'none' : 'disc',
+                      } as any}
+                      name="admin_new_passcode"
+                      id="admin_new_passcode"
+                      defaultValue={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="Nhập mật khẩu mới..."
                       autoComplete="off"
+                      autoCapitalize="none"
                       autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck="false"
-                      data-lpignore="true"
-                      data-1p-ignore="true"
-                      data-form-type="other"
-                      style={showPassword ? {} : ({ WebkitTextSecurity: 'disc', MozTextSecurity: 'disc' } as any)}
-                      className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono tracking-wider"
+                      spellCheck={false}
+                      className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-sans tracking-normal"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
+                      tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -443,7 +497,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   {mode === 'register' && (
                     <>
                       <UserCheck className="w-3.5 h-3.5" />
-                      <span>Xác Nhận & Thiết Lập Tài Khoản Admin</span>
+                      <span>Khởi Tạo Tài Khoản Admin</span>
                     </>
                   )}
                   {mode === 'forgot' && (
@@ -463,7 +517,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             </button>
           </form>
 
-          {/* Mode Switchers */}
+          {/* Mode Switchers Footer Links */}
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             {mode === 'login' && (
               <>
@@ -476,7 +530,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   }}
                   className="hover:text-cyan-300 transition-colors"
                 >
-                  Tạo mật khẩu mới
+                  Khởi tạo tài khoản Admin
                 </button>
                 <button
                   type="button"
@@ -503,7 +557,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   }}
                   className="hover:text-cyan-300 transition-colors"
                 >
-                  Đã có mật khẩu? Đăng nhập ngay
+                  Đã có tài khoản? Đăng nhập ngay
                 </button>
                 <button
                   type="button"

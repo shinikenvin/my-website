@@ -114,10 +114,7 @@ export function BlogSection({ onSelectPost }: BlogSectionProps) {
                       <span aria-hidden="true">·</span>
                       <span className="font-mono">{post.date}</span>
                       <span aria-hidden="true">·</span>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Clock className="w-3 h-3 text-slate-500" />
-                        <span>{post.readTime}</span>
-                      </span>
+                      <span className="text-slate-400">⏱ {post.readTime}</span>
                     </div>
 
                     {/* Title */}

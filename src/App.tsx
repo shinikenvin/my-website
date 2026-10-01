@@ -16,6 +16,7 @@ import { ProjectModal } from './components/ProjectModal';
 import { BlogModal } from './components/BlogModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
+import { CiCdModal } from './components/CiCdModal';
 import { LiveChatWidget } from './components/LiveChatWidget';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, ShieldCheck } from 'lucide-react';
@@ -29,6 +30,9 @@ function PortfolioMain() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<'profile' | 'projects' | 'blog' | 'experience' | 'messages' | 'livechat' | 'security'>('profile');
+  const [adminTargetExperienceId, setAdminTargetExperienceId] = useState<string | null>(null);
+  const [isCiCdOpen, setIsCiCdOpen] = useState(false);
 
   const { t } = useLanguage();
   const { user, isAdmin } = useAuth();
@@ -61,7 +65,19 @@ function PortfolioMain() {
     }
   };
 
-  const handleOpenAdmin = () => {
+  const handleOpenAdmin = (tab: 'profile' | 'projects' | 'blog' | 'experience' | 'messages' | 'livechat' | 'security' = 'profile') => {
+    setAdminInitialTab(tab);
+    setAdminTargetExperienceId(null);
+    if (isAdmin) {
+      setIsAdminDashboardOpen(true);
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
+
+  const handleOpenAdminExperience = (expId?: string) => {
+    setAdminInitialTab('experience');
+    setAdminTargetExperienceId(expId || null);
     if (isAdmin) {
       setIsAdminDashboardOpen(true);
     } else {
@@ -76,7 +92,7 @@ function PortfolioMain() {
       <Navbar
         activeSection={activeSection}
         setActiveSection={scrollToSection}
-        onOpenCiCd={() => {}}
+        onOpenCiCd={() => setIsCiCdOpen(true)}
         onOpenAdmin={handleOpenAdmin}
       />
 
@@ -84,7 +100,7 @@ function PortfolioMain() {
       <main className="relative">
         <Hero 
           onExploreProjects={() => scrollToSection('projects')}
-          onOpenCiCd={() => {}}
+          onOpenCiCd={() => setIsCiCdOpen(true)}
           onOpenContact={() => scrollToSection('contact')}
         />
 
@@ -96,7 +112,7 @@ function PortfolioMain() {
           onSelectPost={(post) => setSelectedPost(post)}
         />
 
-        <AboutSection />
+        <AboutSection onOpenAdminExperience={handleOpenAdminExperience} />
 
         <ContactSection />
       </main>
@@ -107,7 +123,7 @@ function PortfolioMain() {
       {/* Discreet Admin Quick Button bottom-left */}
       <aside aria-label="Admin Trigger" className="fixed bottom-5 left-5 z-30">
         <button
-          onClick={handleOpenAdmin}
+          onClick={() => handleOpenAdmin('profile')}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border shadow-xl backdrop-blur-md transition-all text-xs font-mono active:scale-95 ${
             isAdmin
               ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700/80 hover:bg-emerald-900/90'
@@ -165,7 +181,18 @@ function PortfolioMain() {
       {/* Admin Dashboard Modal */}
       <AdminDashboardModal
         isOpen={isAdminDashboardOpen}
-        onClose={() => setIsAdminDashboardOpen(false)}
+        onClose={() => {
+          setIsAdminDashboardOpen(false);
+          setAdminTargetExperienceId(null);
+        }}
+        initialTab={adminInitialTab}
+        targetExperienceId={adminTargetExperienceId}
+      />
+
+      {/* CI/CD Automation Modal */}
+      <CiCdModal
+        isOpen={isCiCdOpen}
+        onClose={() => setIsCiCdOpen(false)}
       />
 
     </div>

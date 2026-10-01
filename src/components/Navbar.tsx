@@ -79,6 +79,16 @@ export function Navbar({ activeSection, setActiveSection, onOpenCiCd, onOpenAdmi
           {/* Multi-language Selector */}
           <LanguageSelector />
 
+          {/* CI/CD Deploy Button matching Image 4 */}
+          <button
+            onClick={onOpenCiCd}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-cyan-300 border border-cyan-800/80 rounded-lg hover:border-cyan-500 bg-slate-900/60 transition-colors whitespace-nowrap active:scale-95"
+            title="CI/CD Automation Pipeline"
+          >
+            <span className="font-bold text-cyan-400">&gt;_</span>
+            <span>CI/CD Deploy</span>
+          </button>
+
           {/* Admin Button */}
           {isAdmin ? (
             <button

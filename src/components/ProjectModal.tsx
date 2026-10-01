@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Project } from '../types';
-import { X, ExternalLink, Github, CheckCircle2, Layers, Cpu, TrendingUp } from 'lucide-react';
+import { X, ExternalLink, GitFork, CheckCircle2, Layers, Cpu, TrendingUp } from 'lucide-react';
 import { ProjectArtwork } from './Artwork';
 
 interface ProjectModalProps {
@@ -151,7 +151,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               rel="noreferrer noopener"
               className="px-4 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-2 transition-colors"
             >
-              <Github className="w-4 h-4" />
+              <GitFork className="w-4 h-4" />
               <span>Xem Repository</span>
             </a>
 

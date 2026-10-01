@@ -248,18 +248,17 @@ export function ProjectArtwork({ category, title }: { category: string; title: s
 
 export function BlogArtwork({ category }: { category: string }) {
   return (
-    <div className="w-full h-40 relative overflow-hidden bg-slate-900 rounded-t-xl flex items-center justify-center p-6 border-b border-slate-800">
-      <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-25" />
-      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl" />
+    <div className="w-full h-36 sm:h-40 relative overflow-hidden bg-slate-900/90 rounded-t-2xl flex flex-col items-center justify-center p-6 border-b border-slate-800/90">
+      {/* Matrix dot grid pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(#334155_1.2px,transparent_1.2px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
       
-      <div className="relative z-10 flex flex-col items-center text-center space-y-2">
-        <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-400 shadow-lg">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-          </svg>
+      <div className="relative z-10 flex flex-col items-center text-center space-y-2.5">
+        <div className="w-11 h-11 rounded-xl bg-slate-950/90 border border-slate-700/80 flex items-center justify-center text-cyan-400 font-mono font-bold text-base shadow-md">
+          <span>&lt;/&gt;</span>
         </div>
-        <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-          {category}
+        <span className="text-[11px] font-mono uppercase tracking-widest text-slate-300 font-semibold">
+          {category.toUpperCase()}
         </span>
       </div>
     </div>

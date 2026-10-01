@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, X, Send, User, Mail, Sparkles, Volume2, VolumeX, 
-  Minus, Check, CheckCheck, Smile, ShieldCheck, Edit3, ChevronDown
+  Minus, Check, CheckCheck, Smile, ShieldCheck, Edit3, ChevronDown,
+  Users, Globe, MessageCircle
 } from 'lucide-react';
 import { 
-  collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp 
+  collection, query, where, orderBy, onSnapshot, addDoc 
 } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
-import { ChatMessage, ChatUserProfile } from '../types/chat';
+import { ChatMessage, ChatUserProfile, CommunityMessage } from '../types/chat';
 import { playChatChime } from '../utils/audioChime';
 import { usePortfolioData } from '../context/PortfolioDataContext';
+import { useAuth } from '../context/AuthContext';
 
 const AVATAR_OPTIONS = ['🚀', '💻', '🦊', '⚡', '🤖', '🎨', '🐱', '☕', '🎮', '💡'];
+const QUICK_EMOJIS = ['🚀', '💻', '👍', '🔥', '❤️', '👏', '☕'];
 const COLOR_OPTIONS = [
   { name: 'Cyan', bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-400' },
   { name: 'Emerald', bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-400' },
@@ -28,6 +31,7 @@ const SUGGESTIONS = [
 
 export function LiveChatWidget() {
   const { personalInfo } = usePortfolioData();
+  const { isAdmin } = useAuth();
 
   // Widget visibility state
   const [isOpen, setIsOpen] = useState(false);
@@ -35,6 +39,9 @@ export function LiveChatWidget() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Tab state: 'admin' (1-1 with Shinikenvin) vs 'community' (Public Room)
+  const [chatTab, setChatTab] = useState<'admin' | 'community'>('admin');
 
   // User Profile state
   const [userProfile, setUserProfile] = useState<ChatUserProfile | null>(null);
@@ -46,13 +53,20 @@ export function LiveChatWidget() {
     remember: true,
   });
 
-  // Chat message state
+  // Direct 1-1 Chat message state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Community Chat state
+  const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
+  const [communityInputText, setCommunityInputText] = useState('');
+  const [communitySending, setCommunitySending] = useState(false);
+  const [communityUnread, setCommunityUnread] = useState(0);
+  const communityEndRef = useRef<HTMLDivElement>(null);
+  const communityInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Load saved user profile on mount
   useEffect(() => {
@@ -78,7 +92,7 @@ export function LiveChatWidget() {
     }
   }, []);
 
-  // 2. Real-time Firestore sync for this visitor's conversation
+  // 2. Real-time Firestore sync for this visitor's 1-1 direct conversation with Admin
   useEffect(() => {
     if (!userProfile?.userId) return;
 
@@ -100,7 +114,9 @@ export function LiveChatWidget() {
           const lastMsg = msgs[msgs.length - 1];
           if (lastMsg.senderRole === 'admin') {
             if (soundEnabled) playChatChime('receive');
-            if (!isOpen) setUnreadCount((prev) => prev + 1);
+            if (!isOpen || chatTab !== 'admin') {
+              setUnreadCount((prev) => prev + 1);
+            }
           }
         }
 
@@ -113,15 +129,59 @@ export function LiveChatWidget() {
     } catch (err) {
       console.warn('Live chat query setup error:', err);
     }
-  }, [userProfile?.userId, messages.length, soundEnabled, isOpen]);
+  }, [userProfile?.userId, messages.length, soundEnabled, isOpen, chatTab]);
 
-  // Scroll to bottom whenever messages update or chat opens
+  // 3. Real-time Firestore sync for Community Chat room
   useEffect(() => {
-    if (isOpen && !isMinimized) {
+    try {
+      const q = query(
+        collection(db, 'community_chat'),
+        orderBy('createdAt', 'asc')
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const msgs: CommunityMessage[] = [];
+        snapshot.forEach((doc) => {
+          msgs.push({ id: doc.id, ...doc.data() } as CommunityMessage);
+        });
+
+        // Detect new incoming community message for chime & unread count
+        if (msgs.length > communityMessages.length && communityMessages.length > 0) {
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg.senderId !== userProfile?.userId) {
+            if (soundEnabled) playChatChime('receive');
+            if (!isOpen || chatTab !== 'community') {
+              setCommunityUnread((prev) => prev + 1);
+            }
+          }
+        }
+
+        setCommunityMessages(msgs);
+      }, (err) => {
+        console.warn('Community chat listener error:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Community chat query setup error:', err);
+    }
+  }, [communityMessages.length, userProfile?.userId, soundEnabled, isOpen, chatTab]);
+
+  // Scroll to bottom when direct messages update
+  useEffect(() => {
+    if (isOpen && !isMinimized && chatTab === 'admin') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       setUnreadCount(0);
     }
-  }, [messages, isOpen, isMinimized]);
+  }, [messages, isOpen, isMinimized, chatTab]);
+
+  // Scroll to bottom when community messages update
+  useEffect(() => {
+    if (isOpen && !isMinimized && chatTab === 'community') {
+      communityEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setCommunityUnread(0);
+    }
+  }, [communityMessages, isOpen, isMinimized, chatTab]);
 
   // Handle Save Profile
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -147,7 +207,7 @@ export function LiveChatWidget() {
     }
   };
 
-  // Handle Send Message
+  // Handle Send Direct 1-1 Message
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText || inputText).trim();
     if (!textToSend || !userProfile || sending) return;
@@ -172,7 +232,7 @@ export function LiveChatWidget() {
       await addDoc(collection(db, 'live_chat'), newMsgData);
       if (soundEnabled) playChatChime('send');
 
-      // If this is the visitor's first message, also trigger automatic welcome message after a brief pause
+      // If this is the visitor's first message, trigger automatic welcome message after a brief pause
       if (messages.length === 0) {
         setTimeout(async () => {
           try {
@@ -194,10 +254,40 @@ export function LiveChatWidget() {
         }, 1200);
       }
     } catch (err) {
-      console.error('Failed to send chat message:', err);
+      console.error('Failed to send direct chat message:', err);
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
+  // Handle Send Community Message
+  const handleSendCommunityMessage = async (customText?: string) => {
+    const textToSend = (customText || communityInputText).trim();
+    if (!textToSend || !userProfile || communitySending) return;
+
+    setCommunitySending(true);
+    setCommunityInputText('');
+
+    try {
+      const isActualAdmin = isAdmin || userProfile.email.toLowerCase() === 'shinikenvin@gmail.com';
+      const newMsgData = {
+        senderId: userProfile.userId,
+        senderName: isActualAdmin ? 'Shinikenvin (Admin)' : userProfile.name,
+        senderEmail: userProfile.email,
+        senderAvatar: isActualAdmin ? (personalInfo.avatarUrl || '👨‍💻') : userProfile.avatar,
+        senderRole: (isActualAdmin ? 'admin' : 'visitor') as 'admin' | 'visitor',
+        text: textToSend,
+        createdAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, 'community_chat'), newMsgData);
+      if (soundEnabled) playChatChime('send');
+    } catch (err) {
+      console.error('Failed to send community chat message:', err);
+    } finally {
+      setCommunitySending(false);
+      setTimeout(() => communityInputRef.current?.focus(), 50);
     }
   };
 
@@ -211,12 +301,14 @@ export function LiveChatWidget() {
     }
   };
 
+  const totalUnread = unreadCount + communityUnread;
+
   return (
     <>
       {/* Floating Chat Launcher Button (PC & Mobile) */}
       {!isOpen && (
         <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3">
-          {/* Unread badge & greeting pill (Visible on desktop) */}
+          {/* Greeting pill (Desktop) */}
           <div 
             onClick={() => setIsOpen(true)}
             className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 border border-cyan-800/60 shadow-xl shadow-slate-950/60 text-xs font-medium text-slate-200 cursor-pointer backdrop-blur-md hover:border-cyan-500 transition-all group"
@@ -225,7 +317,7 @@ export function LiveChatWidget() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span>Trực tuyến · Chat với Shinikenvin</span>
+            <span>Trực tuyến · Chat Admin & Cộng Đồng</span>
           </div>
 
           <button
@@ -242,10 +334,10 @@ export function LiveChatWidget() {
             {/* Pulsing online indicator */}
             <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-950 animate-pulse" />
 
-            {/* Unread Message Badge */}
-            {unreadCount > 0 && (
+            {/* Total Unread Message Badge */}
+            {totalUnread > 0 && (
               <span className="absolute -top-1 -left-1 px-1.5 py-0.5 text-[10px] font-bold font-mono text-white bg-rose-500 rounded-full border-2 border-slate-950 animate-bounce">
-                {unreadCount}
+                {totalUnread}
               </span>
             )}
           </button>
@@ -257,12 +349,12 @@ export function LiveChatWidget() {
         <div className={`fixed z-50 transition-all duration-300 ${
           isMinimized 
             ? 'bottom-5 right-5 w-72 h-14' 
-            : 'inset-x-0 bottom-0 sm:inset-auto sm:bottom-5 sm:right-5 w-full sm:w-[390px] h-[85vh] sm:h-[550px]'
+            : 'inset-x-0 bottom-0 sm:inset-auto sm:bottom-5 sm:right-5 w-full sm:w-[410px] h-[88vh] sm:h-[570px]'
         }`}>
           <div className="w-full h-full flex flex-col bg-slate-900/95 sm:rounded-2xl rounded-t-2xl border border-slate-800 shadow-2xl backdrop-blur-xl overflow-hidden">
             
             {/* Header */}
-            <div className="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div className="px-4 py-3 bg-slate-950/95 border-b border-slate-800 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 {/* Shinikenvin Avatar with online dot */}
                 <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-cyan-400 bg-slate-900 shrink-0">
@@ -278,12 +370,12 @@ export function LiveChatWidget() {
 
                 <div className="leading-tight">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-white tracking-tight">Shinikenvin</span>
+                    <span className="text-xs font-bold text-white tracking-tight">Shinikenvin Portfolio</span>
                     <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
                   </div>
                   <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Đang trực tuyến · Phản hồi nhanh</span>
+                    <span>Trực tuyến · Chat Admin & Room Cộng Đồng</span>
                   </p>
                 </div>
               </div>
@@ -297,7 +389,7 @@ export function LiveChatWidget() {
                     title="Chỉnh sửa thông tin của bạn"
                   >
                     <span className="text-sm">{userProfile.avatar}</span>
-                    <span className="hidden sm:inline text-[11px] text-slate-300 max-w-[70px] truncate">{userProfile.name}</span>
+                    <span className="hidden sm:inline text-[11px] text-slate-300 max-w-[65px] truncate">{userProfile.name}</span>
                     <Edit3 className="w-3 h-3 text-slate-500" />
                   </button>
                 )}
@@ -339,7 +431,7 @@ export function LiveChatWidget() {
               </div>
             ) : (
               <>
-                {/* VIEW 1: User Profile Setup Form ("yêu cầu thiết lập thông tin người dùng") */}
+                {/* Profile Setup View if not created */}
                 {(!userProfile || showProfileSetup) ? (
                   <div className="flex-1 p-5 overflow-y-auto space-y-4 flex flex-col justify-center">
                     <div className="text-center space-y-1">
@@ -350,7 +442,7 @@ export function LiveChatWidget() {
                         {userProfile ? 'Cập Nhật Thông Tin Của Bạn' : 'Thiết Lập Thông Tin Để Trò Chuyện'}
                       </h4>
                       <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-                        Vui lòng để lại tên và email để Shinikenvin có thể nhận diện và hỗ trợ bạn chu đáo nhất.
+                        Vui lòng để lại tên và email để trò chuyện riêng với Shinikenvin hoặc giao lưu tại Kênh Cộng Đồng.
                       </p>
                     </div>
 
@@ -441,135 +533,318 @@ export function LiveChatWidget() {
                     </form>
                   </div>
                 ) : (
-                  /* VIEW 2: Chat Messages & Input Bar */
-                  <>
-                    {/* Message list area */}
-                    <div className="flex-1 p-4 overflow-y-auto space-y-3.5">
-                      
-                      {/* Welcome card if empty */}
-                      {messages.length === 0 && (
-                        <div className="space-y-3 pt-2">
-                          <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-800/50 space-y-2 text-xs leading-relaxed text-slate-300">
-                            <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
-                              <span>👋 Xin chào {userProfile.name}!</span>
-                            </p>
-                            <p>
-                              Cảm ơn bạn đã ghé thăm Portfolio của Shinikenvin. Hãy gửi tin nhắn hoặc chọn gợi ý nhanh bên dưới để bắt đầu trao đổi nhé!
-                            </p>
-                          </div>
+                  /* Main Chat Workspace with 2 Sub-Tabs */
+                  <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                    
+                    {/* 2-Section Navigation Switcher */}
+                    <div className="grid grid-cols-2 border-b border-slate-800 bg-slate-950/90 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatTab('admin');
+                          setUnreadCount(0);
+                        }}
+                        className={`py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                          chatTab === 'admin'
+                            ? 'border-cyan-400 text-cyan-300 bg-cyan-950/30'
+                            : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Chat Với Admin</span>
+                        {unreadCount > 0 && (
+                          <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-500 text-white rounded-full font-mono">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </button>
 
-                          <div className="space-y-1.5">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-1">
-                              Gợi ý câu hỏi nhanh:
-                            </span>
-                            <div className="space-y-1.5">
-                              {SUGGESTIONS.map((suggestion, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleSendMessage(suggestion)}
-                                  className="w-full text-left p-2.5 text-xs text-slate-300 hover:text-white bg-slate-950/80 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-700/80 rounded-xl transition-all flex items-center justify-between group active:scale-[0.99]"
-                                >
-                                  <span>{suggestion}</span>
-                                  <Send className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
-                                </button>
-                              ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatTab('community');
+                          setCommunityUnread(0);
+                        }}
+                        className={`py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                          chatTab === 'community'
+                            ? 'border-emerald-400 text-emerald-300 bg-emerald-950/30'
+                            : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Kênh Cộng Đồng</span>
+                        {communityUnread > 0 ? (
+                          <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-500 text-slate-950 rounded-full font-mono">
+                            {communityUnread}
+                          </span>
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* TAB 1: DIRECT 1-1 CHAT WITH ADMIN */}
+                    {chatTab === 'admin' && (
+                      <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                        {/* Messages Stream - Independent Scrolling */}
+                        <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-3.5">
+                          {/* Welcome card if empty */}
+                          {messages.length === 0 && (
+                            <div className="space-y-3 pt-2">
+                              <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-800/50 space-y-2 text-xs leading-relaxed text-slate-300">
+                                <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                                  <span>👋 Xin chào {userProfile.name}!</span>
+                                </p>
+                                <p>
+                                  Đây là kênh trò chuyện riêng tư 1-1 trực tiếp với Shinikenvin. Hãy gửi tin nhắn hoặc chọn gợi ý nhanh bên dưới để bắt đầu nhé!
+                                </p>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-1">
+                                  Gợi ý câu hỏi nhanh:
+                                </span>
+                                <div className="space-y-1.5">
+                                  {SUGGESTIONS.map((suggestion, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => handleSendMessage(suggestion)}
+                                      className="w-full text-left p-2.5 text-xs text-slate-300 hover:text-white bg-slate-950/80 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-700/80 rounded-xl transition-all flex items-center justify-between group active:scale-[0.99]"
+                                    >
+                                      <span>{suggestion}</span>
+                                      <Send className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
+                          )}
+
+                          {/* Messages Stream */}
+                          {messages.map((msg) => {
+                            const isVisitor = msg.senderRole === 'visitor';
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`flex gap-2.5 ${isVisitor ? 'flex-row-reverse' : 'flex-row'} items-end`}
+                              >
+                                {/* Avatar Bubble */}
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs shadow-md ${
+                                  isVisitor 
+                                    ? 'bg-cyan-950 border border-cyan-700 text-cyan-300' 
+                                    : 'bg-slate-950 border border-emerald-500 overflow-hidden'
+                                }`}>
+                                  {isVisitor ? (
+                                    <span>{msg.senderAvatar || '🚀'}</span>
+                                  ) : (
+                                    personalInfo.avatarUrl ? (
+                                      <img src={personalInfo.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span>👨‍💻</span>
+                                    )
+                                  )}
+                                </div>
+
+                                {/* Message Bubble */}
+                                <div className={`max-w-[78%] space-y-1 ${isVisitor ? 'items-end' : 'items-start'}`}>
+                                  <div className="flex items-center gap-1.5 px-1 text-[10px] text-slate-400">
+                                    <span className="font-medium text-slate-300">{msg.senderName}</span>
+                                    {!isVisitor && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 font-mono">
+                                        Admin
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className={`p-3 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap ${
+                                    isVisitor
+                                      ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-medium rounded-br-sm shadow-md shadow-cyan-950/50'
+                                      : 'bg-slate-950/90 text-slate-200 border border-slate-800 rounded-bl-sm shadow-md'
+                                  }`}>
+                                    {msg.text}
+                                  </div>
+
+                                  <div className={`text-[9px] font-mono text-slate-400 px-1 flex items-center gap-1 ${
+                                    isVisitor ? 'justify-end' : 'justify-start'
+                                  }`}>
+                                    <span>{formatMessageTime(msg.createdAt)}</span>
+                                    {isVisitor && (
+                                      <CheckCheck className="w-3 h-3 text-cyan-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          
+                          <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Bottom Input Area: Strictly pinned at bottom */}
+                        <div className="p-3 bg-slate-950/95 border-t border-slate-800 shrink-0">
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              ref={inputRef}
+                              type="text"
+                              value={inputText}
+                              onChange={(e) => setInputText(e.target.value)}
+                              placeholder="Nhắn tin riêng cho Shinikenvin..."
+                              className="flex-1 py-2 px-3 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-sans"
+                            />
+                            <button
+                              type="submit"
+                              disabled={!inputText.trim() || sending}
+                              className="p-2.5 bg-cyan-400 hover:bg-cyan-300 disabled:opacity-40 text-slate-950 rounded-xl transition-all shadow-md shadow-cyan-950/50 active:scale-95 shrink-0"
+                              aria-label="Gửi tin nhắn"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </form>
+                          <div className="flex items-center justify-between pt-1.5 px-1 text-[10px] text-slate-500">
+                            <span>Nhấn Enter để gửi</span>
+                            <span className="text-cyan-400/90 font-mono">Chat riêng tư 1-1</span>
                           </div>
                         </div>
-                      )}
-
-                      {/* Messages Stream */}
-                      {messages.map((msg) => {
-                        const isVisitor = msg.senderRole === 'visitor';
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex gap-2.5 ${isVisitor ? 'flex-row-reverse' : 'flex-row'} items-end`}
-                          >
-                            {/* Avatar Bubble */}
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs shadow-md ${
-                              isVisitor 
-                                ? 'bg-cyan-950 border border-cyan-700 text-cyan-300' 
-                                : 'bg-slate-950 border border-emerald-500 overflow-hidden'
-                            }`}>
-                              {isVisitor ? (
-                                <span>{msg.senderAvatar || '🚀'}</span>
-                              ) : (
-                                personalInfo.avatarUrl ? (
-                                  <img src={personalInfo.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
-                                ) : (
-                                  <span>👨‍💻</span>
-                                )
-                              )}
-                            </div>
-
-                            {/* Message Bubble */}
-                            <div className={`max-w-[78%] space-y-1 ${isVisitor ? 'items-end' : 'items-start'}`}>
-                              <div className="flex items-center gap-1.5 px-1 text-[10px] text-slate-400">
-                                <span className="font-medium text-slate-300">{msg.senderName}</span>
-                                {!isVisitor && (
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 font-mono">
-                                    Admin
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className={`p-3 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap ${
-                                isVisitor
-                                  ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-medium rounded-br-sm shadow-md shadow-cyan-950/50'
-                                  : 'bg-slate-950/90 text-slate-200 border border-slate-800 rounded-bl-sm shadow-md'
-                              }`}>
-                                {msg.text}
-                              </div>
-
-                              <div className={`text-[9px] font-mono text-slate-400 px-1 flex items-center gap-1 ${
-                                isVisitor ? 'justify-end' : 'justify-start'
-                              }`}>
-                                <span>{formatMessageTime(msg.createdAt)}</span>
-                                {isVisitor && (
-                                  <CheckCheck className="w-3 h-3 text-cyan-400" />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Bottom input area */}
-                    <div className="p-3 bg-slate-950/90 border-t border-slate-800 shrink-0">
-                      <form 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={inputText}
-                          onChange={(e) => setInputText(e.target.value)}
-                          placeholder="Nhập tin nhắn với Shinikenvin..."
-                          className="flex-1 py-2.5 px-3.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-sans"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!inputText.trim() || sending}
-                          className="p-2.5 bg-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:hover:bg-cyan-400 text-slate-950 rounded-xl transition-all shadow-md shadow-cyan-950/50 active:scale-95 shrink-0"
-                          aria-label="Gửi tin nhắn"
-                        >
-                          <Send className="w-4 h-4" />
-                        </button>
-                      </form>
-                      <div className="flex items-center justify-between pt-1.5 px-1 text-[10px] text-slate-400">
-                        <span>Nhấn Enter để gửi</span>
-                        <span>Mã hóa & lưu trữ Firebase</span>
                       </div>
-                    </div>
-                  </>
+                    )}
+
+                    {/* TAB 2: PUBLIC COMMUNITY CHAT ROOM */}
+                    {chatTab === 'community' && (
+                      <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                        {/* Community Room Stream - Independent Scrolling */}
+                        <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-3.5">
+                          {/* Welcome community banner */}
+                          <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-slate-300 space-y-1">
+                            <div className="flex items-center gap-1.5 text-emerald-300 font-semibold text-xs">
+                              <Users className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Kênh Trò Chuyện Cộng Đồng</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                              Chào mừng bạn! Đây là không gian mở để mọi người cùng thảo luận công nghệ, chia sẻ ý tưởng và trao đổi cùng Shinikenvin.
+                            </p>
+                          </div>
+
+                          {communityMessages.length === 0 ? (
+                            <div className="p-8 text-center text-xs text-slate-400 space-y-1">
+                              <p>Chưa có tin nhắn nào trong kênh cộng đồng.</p>
+                              <p className="text-[11px] text-slate-500">Hãy là người đầu tiên gửi lời chào tới mọi người!</p>
+                            </div>
+                          ) : (
+                            communityMessages.map((msg) => {
+                              const isMe = msg.senderId === userProfile.userId;
+                              const isAdminMsg = msg.senderRole === 'admin';
+
+                              return (
+                                <div
+                                  key={msg.id}
+                                  className={`flex gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end`}
+                                >
+                                  {/* Avatar Bubble */}
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs shadow-md ${
+                                    isAdminMsg
+                                      ? 'bg-slate-950 border border-emerald-400 text-emerald-300'
+                                      : isMe
+                                      ? 'bg-cyan-950 border border-cyan-700 text-cyan-300'
+                                      : 'bg-slate-900 border border-slate-800 text-slate-300'
+                                  }`}>
+                                    {isAdminMsg ? '👨‍💻' : (msg.senderAvatar || '🚀')}
+                                  </div>
+
+                                  {/* Message Bubble */}
+                                  <div className={`max-w-[78%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                                    <div className="flex items-center gap-1.5 px-1 text-[10px] text-slate-400">
+                                      <span className="font-semibold text-slate-200">
+                                        {isMe ? 'Bạn' : msg.senderName}
+                                      </span>
+                                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-medium ${
+                                        isAdminMsg
+                                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                      }`}>
+                                        {isAdminMsg ? 'Admin' : 'Thành viên'}
+                                      </span>
+                                    </div>
+
+                                    <div className={`p-3 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap ${
+                                      isAdminMsg
+                                        ? 'bg-emerald-950/80 text-emerald-100 border border-emerald-700/80 rounded-bl-sm shadow-md'
+                                        : isMe
+                                        ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-medium rounded-br-sm shadow-md shadow-cyan-950/50'
+                                        : 'bg-slate-950/90 text-slate-200 border border-slate-800 rounded-bl-sm shadow-md'
+                                    }`}>
+                                      {msg.text}
+                                    </div>
+
+                                    <div className={`text-[9px] font-mono text-slate-500 px-1 flex items-center gap-1 ${
+                                      isMe ? 'justify-end' : 'justify-start'
+                                    }`}>
+                                      <span>{formatMessageTime(msg.createdAt)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+
+                          <div ref={communityEndRef} />
+                        </div>
+
+                        {/* Quick reaction chips */}
+                        <div className="px-3 py-1.5 bg-slate-950/80 border-t border-slate-800/60 flex items-center gap-1.5 overflow-x-auto shrink-0">
+                          <span className="text-[10px] text-slate-500 font-mono shrink-0">Phản ứng:</span>
+                          {QUICK_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => handleSendCommunityMessage(emoji)}
+                              className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs border border-slate-800 transition-colors shrink-0"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Community Input Area: Strictly pinned at bottom */}
+                        <div className="p-3 bg-slate-950/95 border-t border-slate-800 shrink-0">
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              handleSendCommunityMessage();
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              ref={communityInputRef}
+                              type="text"
+                              value={communityInputText}
+                              onChange={(e) => setCommunityInputText(e.target.value)}
+                              placeholder="Nhắn tin vào kênh cộng đồng..."
+                              className="flex-1 py-2 px-3 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
+                            />
+                            <button
+                              type="submit"
+                              disabled={!communityInputText.trim() || communitySending}
+                              className="p-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 rounded-xl transition-all shadow-md shadow-emerald-950/50 active:scale-95 shrink-0"
+                              aria-label="Gửi tin nhắn cộng đồng"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </form>
+                          <div className="flex items-center justify-between pt-1.5 px-1 text-[10px] text-slate-500">
+                            <span>Nhấn Enter để gửi</span>
+                            <span className="text-emerald-400/90 font-mono">Công khai cho mọi người</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
                 )}
               </>
             )}

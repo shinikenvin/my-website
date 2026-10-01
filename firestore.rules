@@ -21,6 +21,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Work experience items
+    match /experiences/{experienceId} {
+      allow read, write: if true;
+    }
+
     // Contact messages from visitors
     match /messages/{messageId} {
       allow read, write: if true;
@@ -28,6 +33,11 @@ service cloud.firestore {
 
     // Live online chat messages between visitors and admin
     match /live_chat/{chatId} {
+      allow read, write: if true;
+    }
+
+    // Community public chat messages between members and visitors
+    match /community_chat/{chatId} {
       allow read, write: if true;
     }
 

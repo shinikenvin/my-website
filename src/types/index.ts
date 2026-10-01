@@ -47,6 +47,7 @@ export interface BlogPost {
 }
 
 export interface ExperienceItem {
+  id?: string;
   company: string;
   role: string;
   period: string;
@@ -54,6 +55,7 @@ export interface ExperienceItem {
   description: string;
   highlights: string[];
   skills: string[];
+  order?: number;
 }
 
 export interface SkillGroup {

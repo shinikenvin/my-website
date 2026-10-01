@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
 import { ProjectArtwork } from './Artwork';
-import { ExternalLink, ArrowRight, Github } from 'lucide-react';
+import { ExternalLink, ArrowRight, GitFork } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePortfolioData } from '../context/PortfolioDataContext';
@@ -134,7 +134,7 @@ export function ProjectsSection({ onSelectProject }: ProjectsSectionProps) {
                         className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
                         title={t.projects.sourceCode}
                       >
-                        <Github className="w-4 h-4" />
+                        <GitFork className="w-4 h-4" />
                       </a>
                       <a
                         href={project.demoUrl}

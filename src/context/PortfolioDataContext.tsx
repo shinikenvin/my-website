@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Project, BlogPost } from '../types';
-import { PROJECTS_DATA, BLOG_POSTS, PERSONAL_INFO } from '../data/portfolioData';
+import { Project, BlogPost, ExperienceItem } from '../types';
+import { PROJECTS_DATA, BLOG_POSTS, PERSONAL_INFO, EXPERIENCE_DATA } from '../data/portfolioData';
 import { 
   collection, 
   doc, 
@@ -34,12 +34,15 @@ export interface PortfolioInfo {
   avatarUrl: string | null;
   website: string;
   github: string;
+  heroHeadline?: string;
+  bio?: string;
 }
 
 interface PortfolioDataContextType {
   personalInfo: PortfolioInfo;
   projects: Project[];
   blogPosts: BlogPost[];
+  experiences: ExperienceItem[];
   messages: ContactMessage[];
   loading: boolean;
   updatePersonalInfo: (info: Partial<PortfolioInfo>) => Promise<void>;
@@ -49,6 +52,10 @@ interface PortfolioDataContextType {
   addBlogPost: (post: Omit<BlogPost, 'id'>) => Promise<void>;
   editBlogPost: (id: string, post: Partial<BlogPost>) => Promise<void>;
   deleteBlogPost: (id: string) => Promise<void>;
+  addExperience: (exp: Omit<ExperienceItem, 'id'>) => Promise<void>;
+  editExperience: (id: string, exp: Partial<ExperienceItem>) => Promise<void>;
+  deleteExperience: (id: string) => Promise<void>;
+  resetExperiencesToDefault: () => Promise<void>;
   sendContactMessage: (msg: { name: string; email: string; subject: string; message: string }) => Promise<void>;
   deleteMessage: (id: string) => Promise<void>;
 }
@@ -68,11 +75,14 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
       avatarUrl: savedAvatar,
       website: PERSONAL_INFO.website,
       github: PERSONAL_INFO.github,
+      heroHeadline: PERSONAL_INFO.heroHeadline,
+      bio: PERSONAL_INFO.bio,
     };
   });
 
   const [projects, setProjects] = useState<Project[]>(PROJECTS_DATA);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(BLOG_POSTS);
+  const [experiences, setExperiences] = useState<ExperienceItem[]>(EXPERIENCE_DATA);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -128,6 +138,25 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
       }
     }, (error) => {
       console.warn('Firestore posts read:', error.message);
+    });
+    return () => unsub();
+  }, []);
+
+  // Sync Experiences
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'experiences'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list: ExperienceItem[] = [];
+        snapshot.forEach((d) => {
+          list.push({ id: d.id, ...(d.data() as Omit<ExperienceItem, 'id'>) });
+        });
+        list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+        setExperiences(list);
+      } else {
+        setExperiences(EXPERIENCE_DATA);
+      }
+    }, (error) => {
+      console.warn('Firestore experiences read:', error.message);
     });
     return () => unsub();
   }, []);
@@ -195,6 +224,33 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
     setBlogPosts(prev => prev.filter(p => p.id !== id));
   };
 
+  const addExperience = async (exp: Omit<ExperienceItem, 'id'>) => {
+    const order = (experiences.length > 0 ? Math.max(...experiences.map(e => e.order || 0)) : 0) + 1;
+    const itemData = { ...exp, order };
+    const ref = await addDoc(collection(db, 'experiences'), itemData);
+    setExperiences(prev => [...prev, { id: ref.id, ...itemData }]);
+  };
+
+  const editExperience = async (id: string, exp: Partial<ExperienceItem>) => {
+    const existing = experiences.find(e => e.id === id);
+    const updated = { ...(existing || {}), ...exp, id };
+    await setDoc(doc(db, 'experiences', id), updated, { merge: true });
+    setExperiences(prev => prev.map(e => e.id === id ? { ...e, ...exp } : e));
+  };
+
+  const deleteExperience = async (id: string) => {
+    await deleteDoc(doc(db, 'experiences', id));
+    setExperiences(prev => prev.filter(e => e.id !== id));
+  };
+
+  const resetExperiencesToDefault = async () => {
+    for (const exp of EXPERIENCE_DATA) {
+      if (exp.id) {
+        await setDoc(doc(db, 'experiences', exp.id), exp);
+      }
+    }
+  };
+
   const sendContactMessage = async (msg: { name: string; email: string; subject: string; message: string }) => {
     await addDoc(collection(db, 'messages'), {
       ...msg,
@@ -212,6 +268,7 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
       personalInfo,
       projects,
       blogPosts,
+      experiences,
       messages,
       loading,
       updatePersonalInfo,
@@ -221,6 +278,10 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
       addBlogPost,
       editBlogPost,
       deleteBlogPost,
+      addExperience,
+      editExperience,
+      deleteExperience,
+      resetExperiencesToDefault,
       sendContactMessage,
       deleteMessage,
     }}>

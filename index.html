@@ -3,6 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        function isSecurityError(msg) {
+          if (!msg) return false;
+          var s = typeof msg === 'string' ? msg : (msg.message || String(msg));
+          return s.indexOf('cross-origin frame') !== -1 || 
+                 s.indexOf('Blocked a frame with origin') !== -1 ||
+                 s.indexOf('SecurityError') !== -1;
+        }
+
+        var prevOnError = window.onerror;
+        window.onerror = function(msg, url, line, col, error) {
+          if (isSecurityError(msg) || (error && isSecurityError(error.message))) {
+            return true;
+          }
+          if (typeof prevOnError === 'function') {
+            return prevOnError.apply(this, arguments);
+          }
+          return false;
+        };
+
+        window.addEventListener('error', function(e) {
+          if (isSecurityError(e && e.message) || isSecurityError(e && e.error && e.error.message)) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = e && (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+          if (isSecurityError(reason)) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
     <title>Shinikenvin – Kỹ Sư Phần Mềm & Portfolio Cá Nhân</title>
     <meta
       name="description"

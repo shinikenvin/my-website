@@ -13,6 +13,7 @@ export function AvatarModal({ isOpen, onClose, currentAvatar, onSaveAvatar }: Av
   const [customUrl, setCustomUrl] = useState('');
   const [activeTab, setActiveTab] = useState<'upload' | 'url' | 'github'>('upload');
   const [dragActive, setDragActive] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -26,9 +27,11 @@ export function AvatarModal({ isOpen, onClose, currentAvatar, onSaveAvatar }: Av
 
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn tệp hình ảnh (PNG, JPG, WEBP, GIF,...)');
+      setFileError('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP, GIF,...)');
+      setTimeout(() => setFileError(null), 4000);
       return;
     }
+    setFileError(null);
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -120,6 +123,12 @@ export function AvatarModal({ isOpen, onClose, currentAvatar, onSaveAvatar }: Av
             </div>
             <span className="text-xs font-mono text-slate-400">Xem trước hiển thị</span>
           </div>
+
+          {fileError && (
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 text-center animate-in fade-in">
+              {fileError}
+            </div>
+          )}
 
           {/* Tab Selector */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
