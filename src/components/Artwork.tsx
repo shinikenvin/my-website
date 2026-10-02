@@ -1,15 +1,24 @@
-import React from 'react';
-import { Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { Camera, Film, Volume2, VolumeX } from 'lucide-react';
+import { parseVideoUrl } from './MediaDisplay';
 
 export function DeveloperPortrait({ 
   className = "w-full h-full",
   avatarUrl = null,
+  avatarType = 'image',
+  avatarVideoUrl = null,
   onEdit
 }: { 
   className?: string;
   avatarUrl?: string | null;
+  avatarType?: 'image' | 'video';
+  avatarVideoUrl?: string | null;
   onEdit?: () => void;
 }) {
+  const [isMuted, setIsMuted] = useState(true);
+  const isVideo = avatarType === 'video' && Boolean(avatarVideoUrl);
+  const parsedVideo = isVideo ? parseVideoUrl(avatarVideoUrl || undefined) : null;
+
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 border border-slate-800 shadow-2xl flex items-center justify-center p-6 group ${className}`}>
       {/* Background ambient lighting */}
@@ -22,14 +31,57 @@ export function DeveloperPortrait({
         <button
           onClick={onEdit}
           className="absolute top-3 right-3 z-20 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:text-white text-xs font-medium flex items-center gap-1.5 backdrop-blur-md transition-all shadow-md active:scale-95"
-          title="Cập nhật ảnh đại diện"
+          title="Cập nhật ảnh hoặc video đại diện"
         >
           <Camera className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="hidden sm:inline text-[11px]">Đổi ảnh</span>
+          <span className="hidden sm:inline text-[11px]">Đổi đại diện</span>
         </button>
       )}
 
-      {avatarUrl ? (
+      {/* Video Avatar Mode */}
+      {isVideo && parsedVideo ? (
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+          <div className="relative w-52 h-52 sm:w-60 sm:h-60 rounded-3xl p-1 bg-gradient-to-tr from-cyan-400 via-indigo-500 to-sky-300 shadow-2xl shadow-cyan-950/60 overflow-hidden group/vid">
+            <div className="w-full h-full rounded-[22px] overflow-hidden bg-slate-950 relative">
+              {parsedVideo.type === 'direct' ? (
+                <video
+                  src={parsedVideo.embedUrl}
+                  autoPlay
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <iframe
+                  src={`${parsedVideo.embedUrl}&autoplay=1&mute=1&loop=1`}
+                  title="Developer Video Avatar"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  className="w-full h-full border-0 scale-125 pointer-events-none"
+                />
+              )}
+
+              {parsedVideo.type === 'direct' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMuted(!isMuted);
+                  }}
+                  className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-900 border border-slate-700/80 text-cyan-300 backdrop-blur-md opacity-80 hover:opacity-100 transition-opacity z-20 cursor-pointer"
+                  title={isMuted ? 'Bật âm thanh video' : 'Tắt tiếng video'}
+                >
+                  {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+                </button>
+              )}
+            </div>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-slate-900 border border-cyan-800 text-[10px] font-mono text-cyan-300 whitespace-nowrap shadow-md flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Live Video Avatar</span>
+            </div>
+          </div>
+        </div>
+      ) : avatarUrl ? (
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
           <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full p-1.5 bg-gradient-to-tr from-cyan-400 via-indigo-500 to-sky-300 shadow-2xl shadow-cyan-950/60">
             <div className="w-full h-full rounded-full overflow-hidden bg-slate-950">

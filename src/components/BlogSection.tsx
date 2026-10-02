@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BlogPost } from '../types';
 import { BlogArtwork } from './Artwork';
-import { Search, Clock, ArrowRight, Heart, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
+import { 
+  Search, Clock, ArrowRight, Heart, BookOpen, Plus, Edit3, Trash2,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePortfolioData } from '../context/PortfolioDataContext';
@@ -20,17 +23,42 @@ export function BlogSection({ onSelectPost, onOpenAdminBlog }: BlogSectionProps)
   const [editingBlog, setEditingBlog] = useState<BlogPost | null | undefined>(undefined);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination & "Xem thêm" settings (synced to 3 items per page)
+  const POSTS_PER_PAGE = 3;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAll, setShowAll] = useState(false);
+
   const { t } = useLanguage();
   const { blogPosts, deleteBlogPost } = usePortfolioData();
   const { isAdmin } = useAuth();
 
-  const categories = [
-    { id: 'all', label: t.blog.badge },
-    { id: 'DevOps & CI/CD', label: 'DevOps & CI/CD' },
-    { id: 'Frontend & UI', label: 'Frontend & UI' },
-    { id: 'Kiến trúc & Design', label: 'Kiến trúc / Architecture' },
-    { id: 'Hiệu năng & Tối ưu', label: 'Performance' },
-  ];
+  // Reset page when category or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
+  // Dynamic categories including defaults + any custom category added by admin
+  const categories = useMemo(() => {
+    const defaultCats = [
+      { id: 'all', label: t.blog.badge },
+      { id: 'DevOps & CI/CD', label: 'DevOps & CI/CD' },
+      { id: 'Frontend & UI', label: 'Frontend & UI' },
+      { id: 'Kiến trúc & Design', label: 'Kiến trúc / Architecture' },
+      { id: 'Hiệu năng & Tối ưu', label: 'Performance' },
+    ];
+    const catMap = new Map<string, string>();
+    defaultCats.forEach((c) => catMap.set(c.id, c.label));
+
+    blogPosts.forEach((post) => {
+      if (post.category?.trim() && !catMap.has(post.category.trim())) {
+        catMap.set(post.category.trim(), post.category.trim());
+      }
+    });
+
+    const list: { id: string; label: string }[] = [];
+    catMap.forEach((label, id) => list.push({ id, label }));
+    return list;
+  }, [blogPosts, t.blog.badge]);
 
   const filteredPosts = blogPosts.filter((post) => {
     const matchesSearch =
@@ -43,6 +71,26 @@ export function BlogSection({ onSelectPost, onOpenAdminBlog }: BlogSectionProps)
 
     return matchesSearch && matchesCategory;
   });
+
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+
+  // Paginated or expanded posts list
+  const displayedPosts = useMemo(() => {
+    if (showAll || filteredPosts.length <= POSTS_PER_PAGE) {
+      return filteredPosts;
+    }
+    const start = (currentPage - 1) * POSTS_PER_PAGE;
+    return filteredPosts.slice(start, start + POSTS_PER_PAGE);
+  }, [filteredPosts, showAll, currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setShowAll(false);
+    const el = document.getElementById('blog');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <section id="blog" className="py-16 md:py-24 border-t border-slate-900 bg-slate-950 relative">
@@ -118,9 +166,9 @@ export function BlogSection({ onSelectPost, onOpenAdminBlog }: BlogSectionProps)
         </div>
 
         {/* Blog Post Grid */}
-        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
-            {filteredPosts.map((post) => (
+            {displayedPosts.map((post) => (
               <motion.article
                 key={post.id}
                 layout
@@ -132,7 +180,23 @@ export function BlogSection({ onSelectPost, onOpenAdminBlog }: BlogSectionProps)
                 className="group cursor-pointer flex flex-col justify-between rounded-2xl bg-slate-900/50 border border-slate-800/80 hover:border-slate-700 hover:bg-slate-900 transition-all duration-200 overflow-hidden shadow-lg hover:shadow-cyan-950/20"
               >
                 {/* Visual Header */}
-                <BlogArtwork category={post.category} />
+                <div className="cursor-pointer overflow-hidden group-hover:opacity-95 transition-opacity relative h-48 bg-slate-950">
+                  {post.coverImage ? (
+                    <img 
+                      src={post.coverImage} 
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <BlogArtwork category={post.category} />
+                  )}
+                  {post.videoUrl && (
+                    <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-slate-950/80 border border-cyan-800/80 text-[10px] font-mono text-cyan-300 flex items-center gap-1 backdrop-blur-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <span>Video</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Body Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
@@ -203,6 +267,88 @@ export function BlogSection({ onSelectPost, onOpenAdminBlog }: BlogSectionProps)
             ))}
           </AnimatePresence>
         </motion.div>
+
+        {/* Pagination & "Xem thêm" Controller for Blog */}
+        {filteredPosts.length > POSTS_PER_PAGE && (
+          <div className="mt-10 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Status Counter */}
+            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span>
+                {showAll
+                  ? `Đang hiển thị toàn bộ ${filteredPosts.length} bài viết`
+                  : `Hiển thị ${(currentPage - 1) * POSTS_PER_PAGE + 1} - ${Math.min(currentPage * POSTS_PER_PAGE, filteredPosts.length)} trên tổng số ${filteredPosts.length} bài viết (Trang ${currentPage}/${totalPages})`}
+              </span>
+            </div>
+
+            {/* Pagination Controls & Expand Toggle */}
+            <div className="flex flex-wrap items-center gap-2">
+              {!showAll ? (
+                <>
+                  <button
+                    onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center gap-1 text-xs font-medium cursor-pointer"
+                    title="Trang trước"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Trước</span>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      const isActive = currentPage === page;
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`w-8 h-8 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-cyan-400 text-slate-950 shadow-md shadow-cyan-950/50 scale-105'
+                              : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center gap-1 text-xs font-medium cursor-pointer"
+                    title="Trang sau"
+                  >
+                    <span className="hidden sm:inline">Sau</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => setShowAll(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-cyan-800/80 hover:border-cyan-500 text-cyan-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5 ml-1 shadow-sm cursor-pointer"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span>Xem tất cả ({filteredPosts.length})</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowAll(false);
+                    setCurrentPage(1);
+                    const el = document.getElementById('blog');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-cyan-800 text-cyan-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Thu gọn (Chia thành {totalPages} trang)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {filteredPosts.length === 0 && (
           <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800 text-slate-400">

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Project } from '../types';
 import { X, ExternalLink, GitFork, CheckCircle2, Layers, Cpu, TrendingUp } from 'lucide-react';
 import { ProjectArtwork } from './Artwork';
+import { MediaDisplay } from './MediaDisplay';
 
 interface ProjectModalProps {
   project: Project | null;
@@ -50,9 +51,17 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
           </button>
         </div>
 
-        {/* Visual Header Artwork */}
-        <div className="w-full">
-          <ProjectArtwork category={project.category} title={project.title} />
+        {/* Visual Header Artwork / Custom Cover Image */}
+        <div className="w-full overflow-hidden max-h-[340px] bg-slate-950">
+          {project.coverImage ? (
+            <img 
+              src={project.coverImage} 
+              alt={project.title}
+              className="w-full h-full object-cover max-h-[340px]" 
+            />
+          ) : (
+            <ProjectArtwork category={project.category} title={project.title} />
+          )}
         </div>
 
         {/* Modal Body Content */}
@@ -67,6 +76,14 @@ export function ProjectModal({ project, onClose }: ProjectModalProps) {
               {project.fullCaseStudy.overview}
             </p>
           </div>
+
+          {/* Media Presentation Section (Video & Screenshots) */}
+          <MediaDisplay
+            videoUrl={project.videoUrl}
+            videoTitle={project.videoTitle}
+            galleryImages={project.galleryImages}
+            title={project.title}
+          />
 
           {/* Metrics Highlight Banner */}
           <div className="grid grid-cols-3 gap-3 p-4 rounded-xl bg-slate-950/60 border border-slate-800">

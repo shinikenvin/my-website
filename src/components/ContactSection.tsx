@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { Mail, Github, Send, Copy, Check, CheckCircle2, Globe, Download } from 'lucide-react';
+import { 
+  Mail, Github, Send, Copy, Check, CheckCircle2, Globe, Download, 
+  Edit3, Phone, Linkedin 
+} from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePortfolioData } from '../context/PortfolioDataContext';
+import { useAuth } from '../context/AuthContext';
+import { ContactChannelsEditModal } from './ContactChannelsEditModal';
 
 export function ContactSection() {
   const { t } = useLanguage();
   const { personalInfo, sendContactMessage } = usePortfolioData();
+  const { isAdmin } = useAuth();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,6 +24,7 @@ export function ContactSection() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isEditingContact, setIsEditingContact] = useState(false);
 
   const handleCopyEmail = async () => {
     try {
@@ -37,6 +45,7 @@ N:${personalInfo.name};;;;
 FN:${personalInfo.name}
 TITLE:${personalInfo.role}
 EMAIL;TYPE=INTERNET,PREF:${personalInfo.email}
+TEL;TYPE=CELL:${personalInfo.phone || ''}
 URL;TYPE=WORK:${personalInfo.website}
 NOTE:Specializing in high-performance web apps, scalable cloud architectures, and GitHub Actions CI/CD automation.
 END:VCARD`;
@@ -114,9 +123,22 @@ END:VCARD`;
           <div className="lg:col-span-5 space-y-6">
             
             <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-              <h3 className="text-base font-bold text-white">
-                {t.contact.directContact}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">
+                  {t.contact.directContact}
+                </h3>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingContact(true)}
+                    className="px-2.5 py-1 text-xs font-semibold text-cyan-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer border border-cyan-800/60 active:scale-95"
+                    title="Tùy biến các kênh liên hệ trực tiếp"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Sửa kênh</span>
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-3 text-xs sm:text-sm">
                 {/* Email card with copy */}
@@ -134,7 +156,7 @@ END:VCARD`;
                   </div>
                   <button
                     onClick={handleCopyEmail}
-                    className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
                     title="Sao chép email"
                   >
                     {copiedEmail ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -142,50 +164,143 @@ END:VCARD`;
                 </div>
 
                 {/* GitHub link */}
-                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-slate-900 text-slate-300">
-                      <Github className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-slate-400 font-mono">GitHub Profile</div>
-                      <a 
-                        href={personalInfo.github} 
-                        target="_blank" 
-                        rel="noreferrer noopener"
-                        className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
-                      >
-                        github.com/shinikenvin
-                      </a>
+                {personalInfo.github && (
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-slate-900 text-slate-300">
+                        <Github className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">GitHub Profile</div>
+                        <a 
+                          href={personalInfo.github.startsWith('http') ? personalInfo.github : `https://${personalInfo.github}`} 
+                          target="_blank" 
+                          rel="noreferrer noopener"
+                          className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
+                        >
+                          {personalInfo.github.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Website URL */}
-                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-slate-400 font-mono">GitHub Pages Hosting</div>
-                      <a 
-                        href={personalInfo.website} 
-                        target="_blank" 
-                        rel="noreferrer noopener"
-                        className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
-                      >
-                        shinikenvin.github.io/my-website
-                      </a>
+                {personalInfo.website && (
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-indigo-950 text-indigo-400">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {personalInfo.websiteLabel || 'GitHub Pages Hosting'}
+                        </div>
+                        <a 
+                          href={personalInfo.website.startsWith('http') ? personalInfo.website : `https://${personalInfo.website}`} 
+                          target="_blank" 
+                          rel="noreferrer noopener"
+                          className="text-slate-200 hover:text-cyan-400 font-medium transition-colors"
+                        >
+                          {personalInfo.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* Optional Phone / Zalo */}
+                {personalInfo.phone && (
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-950 text-emerald-400">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">Điện thoại / Zalo</div>
+                        <a href={`tel:${personalInfo.phone}`} className="text-slate-200 hover:text-cyan-400 font-medium transition-colors font-mono">
+                          {personalInfo.phone}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Telegram */}
+                {personalInfo.telegram && (
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-sky-950 text-sky-400">
+                        <Send className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">Telegram</div>
+                        <a 
+                          href={personalInfo.telegram.startsWith('http') ? personalInfo.telegram : `https://t.me/${personalInfo.telegram.replace('@', '')}`}
+                          target="_blank" 
+                          rel="noreferrer noopener"
+                          className="text-slate-200 hover:text-cyan-400 font-medium transition-colors font-mono"
+                        >
+                          {personalInfo.telegram}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional LinkedIn */}
+                {personalInfo.linkedin && (
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-950 text-blue-400">
+                        <Linkedin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">LinkedIn Profile</div>
+                        <a 
+                          href={personalInfo.linkedin.startsWith('http') ? personalInfo.linkedin : `https://${personalInfo.linkedin}`}
+                          target="_blank" 
+                          rel="noreferrer noopener"
+                          className="text-slate-200 hover:text-cyan-400 font-medium transition-colors font-mono"
+                        >
+                          {personalInfo.linkedin.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom Additional Channels */}
+                {personalInfo.additionalChannels?.map((ch, idx) => (
+                  <div key={ch.id || idx} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-slate-900 text-cyan-400">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-slate-400 font-mono">{ch.label}</div>
+                        {ch.url ? (
+                          <a 
+                            href={ch.url.startsWith('http') ? ch.url : `https://${ch.url}`}
+                            target="_blank" 
+                            rel="noreferrer noopener"
+                            className="text-slate-200 hover:text-cyan-400 font-medium transition-colors font-mono"
+                          >
+                            {ch.value || ch.url.replace(/^https?:\/\//, '')}
+                          </a>
+                        ) : (
+                          <span className="text-slate-200 font-medium font-mono">{ch.value}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Download vCard action */}
               <button
                 onClick={handleDownloadVCard}
-                className="w-full py-2.5 px-4 text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 hover:text-white border border-slate-700/60 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2.5 px-4 text-xs font-medium text-slate-300 bg-slate-800/80 hover:bg-slate-700 hover:text-white border border-slate-700/60 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Save Contact (.vcf)</span>
@@ -193,8 +308,20 @@ END:VCARD`;
             </div>
 
             {/* Quick response commitment */}
-            <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 space-y-1">
-              <span className="font-semibold text-slate-200">{t.contact.responseSpeed}</span>
+            <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 flex items-center justify-between gap-2">
+              <span className="font-semibold text-slate-200">
+                {personalInfo.responseSpeed || t.contact.responseSpeed || 'Phản hồi trong vòng 2-4 giờ làm việc'}
+              </span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingContact(true)}
+                  className="text-slate-500 hover:text-cyan-400 text-xs cursor-pointer p-1 transition-colors"
+                  title="Chỉnh sửa dòng cam kết thời gian phản hồi"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
           </div>
@@ -231,7 +358,7 @@ END:VCARD`;
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder={t.contact.namePlaceholder}
+                        placeholder="John Doe"
                         className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
                         required
                       />
@@ -245,7 +372,7 @@ END:VCARD`;
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder={t.contact.emailPlaceholder}
+                        placeholder="john@example.com"
                         className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
                         required
                       />
@@ -260,23 +387,16 @@ END:VCARD`;
                       type="text"
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                      placeholder={t.contact.subjectPlaceholder}
-                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-xs">
-                      <label className="font-medium text-slate-300">
-                        {t.contact.messageLabel} <span className="text-rose-400">*</span>
-                      </label>
-                      <span className="font-mono text-slate-500 tabular-nums">
-                        {formData.message.length}/1000
-                      </span>
-                    </div>
+                    <label className="text-xs font-medium text-slate-300">
+                      {t.contact.messageLabel} <span className="text-rose-400">*</span>
+                    </label>
                     <textarea
                       rows={5}
-                      maxLength={1000}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder={t.contact.messagePlaceholder}
@@ -288,7 +408,7 @@ END:VCARD`;
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3 px-4 text-xs sm:text-sm font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-3 px-4 text-xs sm:text-sm font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {submitting ? (
                       <span className="flex items-center gap-2">
@@ -311,6 +431,12 @@ END:VCARD`;
         </div>
 
       </div>
+
+      {/* Direct Contact Channels Edit Modal for Admin */}
+      <ContactChannelsEditModal 
+        isOpen={isEditingContact} 
+        onClose={() => setIsEditingContact(false)} 
+      />
     </section>
   );
 }

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { SKILL_GROUPS } from '../data/portfolioData';
-import { Briefcase, Code2, Sparkles, CheckCircle2, Edit3, Plus, Shield, Trash2, AlertTriangle } from 'lucide-react';
+import { Briefcase, Code2, Sparkles, CheckCircle2, Edit3, Plus, Shield, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePortfolioData } from '../context/PortfolioDataContext';
 import { useAuth } from '../context/AuthContext';
-import { ExperienceItem } from '../types';
+import { ExperienceItem, SkillGroup } from '../types';
 import { ExperienceEditModal } from './ExperienceEditModal';
+import { SkillGroupEditModal } from './SkillGroupEditModal';
 
 interface AboutSectionProps {
   onOpenAdminExperience?: (experienceId?: string) => void;
@@ -13,12 +13,26 @@ interface AboutSectionProps {
 
 export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
   const { t } = useLanguage();
-  const { experiences, deleteExperience } = usePortfolioData();
+  const { 
+    experiences, 
+    deleteExperience, 
+    skillGroups, 
+    addSkillGroup, 
+    editSkillGroup, 
+    deleteSkillGroup, 
+    resetSkillsToDefault 
+  } = usePortfolioData();
   const { isAdmin } = useAuth();
 
+  // Experience edit & delete state
   const [editingExperience, setEditingExperience] = useState<ExperienceItem | null | undefined>(undefined);
   const [expToDelete, setExpToDelete] = useState<ExperienceItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Skill group edit & delete state
+  const [editingSkillGroup, setEditingSkillGroup] = useState<SkillGroup | null | undefined>(undefined);
+  const [groupToDelete, setGroupToDelete] = useState<SkillGroup | null>(null);
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
 
   const handleDeleteExpConfirm = async () => {
     if (!expToDelete?.id) return;
@@ -30,6 +44,27 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
       alert(`Lỗi khi xóa kinh nghiệm: ${err.message || 'Vui lòng thử lại'}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleSaveSkillGroup = async (group: SkillGroup) => {
+    if (editingSkillGroup?.id) {
+      await editSkillGroup(editingSkillGroup.id, group);
+    } else {
+      await addSkillGroup(group);
+    }
+  };
+
+  const handleDeleteGroupConfirm = async () => {
+    if (!groupToDelete?.id && !groupToDelete?.title) return;
+    setIsDeletingGroup(true);
+    try {
+      await deleteSkillGroup(groupToDelete.id || groupToDelete.title);
+      setGroupToDelete(null);
+    } catch (err: any) {
+      alert(`Lỗi khi xóa nhóm kỹ năng: ${err.message || 'Vui lòng thử lại'}`);
+    } finally {
+      setIsDeletingGroup(false);
     }
   };
 
@@ -106,74 +141,62 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
                 {t.about.tabExperience}
               </h3>
             </div>
-
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setEditingExperience(null)}
-                className="px-3 py-1.5 text-xs text-cyan-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-500 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Thêm vị trí kinh nghiệm</span>
-              </button>
-            )}
           </div>
 
           <div className="relative pl-6 sm:pl-8 border-l border-slate-800 space-y-10">
             {experiences.map((exp, idx) => (
-              <div key={exp.id || idx} className="relative group">
-                {/* Timeline node */}
-                <div className="absolute -left-[31px] sm:-left-[39px] top-1 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-cyan-400 group-hover:scale-125 transition-transform" />
+              <div key={exp.id || idx} className="relative group/exp">
+                {/* Timeline node icon */}
+                <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 w-3.5 h-3.5 rounded-full bg-slate-950 border-2 border-cyan-400 group-hover/exp:scale-125 transition-transform" />
 
-                <div className="space-y-3 p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 hover:border-slate-700 transition-colors relative">
-                  {/* Admin Inline Controls on item */}
-                  {isAdmin && (
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingExperience(exp)}
-                        className="px-2.5 py-1 text-xs text-cyan-300 hover:text-white bg-slate-950/90 hover:bg-slate-800 border border-cyan-800/60 hover:border-cyan-400 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Chỉnh sửa mục kinh nghiệm này trực tiếp"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Sửa</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExpToDelete(exp)}
-                        className="px-2.5 py-1 text-xs text-rose-300 hover:text-white bg-slate-950/90 hover:bg-rose-900/40 border border-rose-800/60 hover:border-rose-400 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Xóa mục kinh nghiệm này"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Xóa</span>
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pr-24 sm:pr-28">
+                <div className="space-y-3 bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 hover:border-slate-700 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div>
-                      <h4 className="text-base sm:text-lg font-bold text-white">
-                        {exp.role}
+                      <h4 className="text-base font-bold text-white flex items-center gap-2">
+                        <span>{exp.role}</span>
+                        <span className="text-cyan-400 font-normal">@ {exp.company}</span>
                       </h4>
-                      <div className="text-xs text-cyan-400 font-medium">
-                        {exp.company} <span className="text-slate-600">·</span> {exp.location}
+                      <p className="text-xs text-slate-400 font-mono">
+                        {exp.period} · {exp.location}
+                      </p>
+                    </div>
+
+                    {/* Admin Actions: Sửa & Xóa Trực Tiếp */}
+                    {isAdmin && (
+                      <div className="flex items-center gap-2 self-start sm:self-auto pt-2 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingExperience(exp)}
+                          className="px-2.5 py-1 text-xs text-cyan-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-cyan-900/40"
+                          title="Chỉnh sửa vị trí này trực tiếp"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Sửa</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExpToDelete(exp)}
+                          className="px-2.5 py-1 text-xs text-rose-400 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-rose-900/40"
+                          title="Xóa vị trí kinh nghiệm này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Xóa</span>
+                        </button>
                       </div>
-                    </div>
-                    <div className="text-xs font-mono text-slate-400 tabular-nums">
-                      {exp.period}
-                    </div>
+                    )}
                   </div>
 
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                     {exp.description}
                   </p>
 
+                  {/* Highlights Bullet Points */}
                   {exp.highlights && exp.highlights.length > 0 && (
                     <ul className="space-y-1.5 pt-1">
                       {exp.highlights.map((h, hIdx) => (
-                        <li key={hIdx} className="flex items-start gap-2 text-xs text-slate-300">
-                          <span className="text-cyan-400 mt-0.5">▸</span>
-                          <span>{h}</span>
+                        <li key={hIdx} className="text-xs text-slate-400 flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                          <span className="leading-relaxed">{h}</span>
                         </li>
                       ))}
                     </ul>
@@ -181,7 +204,7 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
 
                   {/* Skills tags */}
                   {exp.skills && exp.skills.length > 0 && (
-                    <div className="pt-2 text-xs text-slate-400 border-t border-slate-800/70">
+                    <div className="pt-2 text-xs font-mono text-cyan-300/90 flex flex-wrap items-center">
                       <span className="text-slate-300 font-medium mr-2">{t.about.tabSkills}:</span>
                       <span>{exp.skills.join(' · ')}</span>
                     </div>
@@ -192,24 +215,77 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
           </div>
         </div>
 
-        {/* Technical Skills Matrix */}
+        {/* Technical Skills Matrix with Full Customization */}
         <div className="space-y-8">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400">
-              <Code2 className="w-4 h-4" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400">
+                <Code2 className="w-4 h-4" />
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                {t.about.tabSkills}
+              </h3>
             </div>
-            <h3 className="text-xl font-bold text-white tracking-tight">
-              {t.about.tabSkills}
-            </h3>
+
+            {/* Admin Controls for Skills */}
+            {isAdmin && (
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingSkillGroup(null)}
+                  className="px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-md shadow-cyan-950/40 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>+ Thêm Nhóm Kỹ Năng</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('Khôi phục danh sách kỹ năng công nghệ về các nhóm mặc định ban đầu?')) {
+                      await resetSkillsToDefault();
+                    }
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs transition-colors cursor-pointer"
+                  title="Khôi phục danh sách kỹ năng ban đầu"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {SKILL_GROUPS.map((group, gIdx) => (
-              <div key={gIdx} className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 flex flex-col justify-between space-y-5">
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold text-white">
-                    {group.title}
-                  </h4>
+            {skillGroups.map((group, gIdx) => (
+              <div 
+                key={group.id || gIdx} 
+                className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 flex flex-col justify-between space-y-5 hover:border-slate-700/80 transition-colors group/card"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-base font-bold text-white leading-tight">
+                      {group.title}
+                    </h4>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1.5 shrink-0 opacity-80 group-hover/card:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => setEditingSkillGroup(group)}
+                          className="p-1.5 text-cyan-400 hover:text-cyan-300 rounded-lg hover:bg-cyan-950/50 transition-colors cursor-pointer"
+                          title="Chỉnh sửa nhóm kỹ năng này"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGroupToDelete(group)}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-rose-950/50 transition-colors cursor-pointer"
+                          title="Xóa nhóm kỹ năng này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400">
                     {group.description}
                   </p>
@@ -219,7 +295,7 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
                   {group.skills.map((skill, sIdx) => (
                     <div key={sIdx} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className={`font-medium ${skill.highlight ? 'text-cyan-300' : 'text-slate-300'}`}>
+                        <span className={`font-medium ${skill.highlight ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
                           {skill.name}
                         </span>
                         <span className="font-mono text-slate-400 tabular-nums">
@@ -253,7 +329,15 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
         experience={editingExperience}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Dedicated Direct Skill Group Edit Modal */}
+      <SkillGroupEditModal
+        isOpen={editingSkillGroup !== undefined}
+        onClose={() => setEditingSkillGroup(undefined)}
+        group={editingSkillGroup}
+        onSave={handleSaveSkillGroup}
+      />
+
+      {/* Delete Confirmation Modal for Experience */}
       {expToDelete && (
         <div 
           className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
@@ -293,6 +377,59 @@ export function AboutSection({ onOpenAdminExperience }: AboutSectionProps) {
                 className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-md shadow-rose-950/40"
               >
                 {isDeleting ? (
+                  <span>Đang xóa...</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xác nhận xóa</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal for Skill Group */}
+      {groupToDelete && (
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => !isDeletingGroup && setGroupToDelete(null)}
+        >
+          <div 
+            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-2.5 rounded-xl bg-rose-950/70 border border-rose-800/80 text-rose-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-white">Xác nhận xóa nhóm kỹ năng</h4>
+                <p className="text-[11px] text-slate-400">Thao tác dành cho Quản trị viên</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Bạn có chắc chắn muốn xóa nhóm kỹ năng <strong className="text-white font-semibold">"{groupToDelete.title}"</strong> cùng toàn bộ kỹ năng bên trong không? Thao tác này sẽ cập nhật ngay vào cơ sở dữ liệu.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                disabled={isDeletingGroup}
+                onClick={() => setGroupToDelete(null)}
+                className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingGroup}
+                onClick={handleDeleteGroupConfirm}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-md shadow-rose-950/40"
+              >
+                {isDeletingGroup ? (
                   <span>Đang xóa...</span>
                 ) : (
                   <>

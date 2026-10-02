@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BlogPost } from '../types';
 import { X, Heart, Share2, Copy, Check, BookOpen, Clock, Calendar } from 'lucide-react';
+import { MediaDisplay } from './MediaDisplay';
 
 interface BlogModalProps {
   post: BlogPost | null;
@@ -131,6 +132,15 @@ export function BlogModal({ post, onClose }: BlogModalProps) {
             {post.summary}
           </p>
 
+          {/* Media Presentation Section (Video demo & Cover/Gallery Images) */}
+          <MediaDisplay
+            videoUrl={post.videoUrl}
+            videoTitle={post.videoTitle || 'Video Giới Thiệu & Thuyết Minh'}
+            coverImage={post.coverImage}
+            galleryImages={post.galleryImages}
+            title={post.title}
+          />
+
           {/* Introduction */}
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
             {post.content.introduction}
@@ -144,6 +154,22 @@ export function BlogModal({ post, onClose }: BlogModalProps) {
                   {section.heading}
                 </h2>
                 
+                {/* Section Image if specified */}
+                {section.image && (
+                  <div className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+                    <img 
+                      src={section.image} 
+                      alt={section.heading} 
+                      className="w-full max-h-96 object-cover" 
+                    />
+                    {section.imageCaption && (
+                      <p className="px-4 py-2 text-xs text-slate-400 bg-slate-900/80 border-t border-slate-800 text-center italic">
+                        {section.imageCaption}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
                   {section.body}
                 </p>

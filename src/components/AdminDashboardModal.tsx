@@ -3,8 +3,10 @@ import {
   X, Shield, User, FolderGit2, BookOpen, MessageSquare, Lock, 
   Plus, Trash2, Edit3, Check, Upload, Image, Link, LogOut, KeyRound, 
   ExternalLink, Sparkles, RefreshCw, AlertCircle, CheckCircle2, Camera,
-  MessageCircle, Send, Briefcase, Calendar, MapPin, Building2, Users, Globe
+  MessageCircle, Send, Briefcase, Calendar, MapPin, Building2, Users, Globe,
+  Film, Volume2
 } from 'lucide-react';
+import { parseVideoUrl } from './MediaDisplay';
 import { 
   collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, where, getDocs 
 } from 'firebase/firestore';
@@ -14,27 +16,22 @@ import { useAuth } from '../context/AuthContext';
 import { usePortfolioData, ContactMessage } from '../context/PortfolioDataContext';
 import { Project, BlogPost, ExperienceItem } from '../types';
 
-export type AdminTabType = 'profile' | 'experience' | 'messages' | 'livechat' | 'security';
+export type AdminTabType = 'profile' | 'messages' | 'livechat' | 'security';
 
 interface AdminDashboardModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: AdminTabType;
-  targetExperienceId?: string | null;
 }
 
 export function AdminDashboardModal({ 
   isOpen, 
   onClose, 
   initialTab = 'profile',
-  targetExperienceId = null,
 }: AdminDashboardModalProps) {
   const { user, logout, changePassword, resetPassword } = useAuth();
   const { 
     personalInfo, updatePersonalInfo, 
-    projects, addProject, editProject, deleteProject,
-    blogPosts, addBlogPost, editBlogPost, deleteBlogPost,
-    experiences, addExperience, editExperience, deleteExperience, resetExperiencesToDefault,
     messages, deleteMessage 
   } = usePortfolioData();
 
@@ -257,6 +254,8 @@ export function AdminDashboardModal({
     status: personalInfo.status,
     website: personalInfo.website,
     avatarUrl: personalInfo.avatarUrl || '',
+    avatarType: personalInfo.avatarType || 'image',
+    avatarVideoUrl: personalInfo.avatarVideoUrl || '',
     heroHeadline: personalInfo.heroHeadline || 'Kiến tạo trải nghiệm số,\nvới hiệu năng đỉnh cao\n& tư duy sản phẩm chuyên sâu.',
     bio: personalInfo.bio || 'Chào bạn, tôi là Shinikenvin, một Full-Stack Software Engineer & Creative Developer. Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.',
   });
@@ -270,6 +269,8 @@ export function AdminDashboardModal({
       status: personalInfo.status,
       website: personalInfo.website,
       avatarUrl: personalInfo.avatarUrl || '',
+      avatarType: personalInfo.avatarType || 'image',
+      avatarVideoUrl: personalInfo.avatarVideoUrl || '',
       heroHeadline: personalInfo.heroHeadline || 'Kiến tạo trải nghiệm số,\nvới hiệu năng đỉnh cao\n& tư duy sản phẩm chuyên sâu.',
       bio: personalInfo.bio || 'Chào bạn, tôi là Shinikenvin, một Full-Stack Software Engineer & Creative Developer. Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.',
     });
@@ -278,6 +279,7 @@ export function AdminDashboardModal({
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileUploadError, setProfileUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,55 +292,48 @@ export function AdminDashboardModal({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        setProfileForm((prev) => ({ ...prev, avatarUrl: event.target!.result as string }));
+        setProfileForm((prev) => ({ 
+          ...prev, 
+          avatarType: 'image',
+          avatarUrl: event.target!.result as string 
+        }));
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // Experience Form State
-  const [isEditingExperience, setIsEditingExperience] = useState(false);
-  const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
-  const [experienceForm, setExperienceForm] = useState({
-    company: '',
-    role: '',
-    period: '',
-    location: '',
-    description: '',
-    highlights: '',
-    skills: '',
-    order: 1,
-  });
-  const [experienceNotice, setExperienceNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [experienceLoading, setExperienceLoading] = useState(false);
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setProfileUploadError('Vui lòng chọn tệp video hợp lệ (MP4, WebM, MOV,...)');
+      setTimeout(() => setProfileUploadError(null), 4000);
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setProfileUploadError('Video nên có dung lượng dưới 8MB để tối ưu hóa thời gian tải.');
+      setTimeout(() => setProfileUploadError(null), 4000);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setProfileForm((prev) => ({ 
+          ...prev, 
+          avatarType: 'video',
+          avatarVideoUrl: event.target!.result as string 
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
-  // Sync initial tab & target experience when modal opens
+  // Sync initial tab when modal opens
   useEffect(() => {
     if (isOpen && initialTab) {
       setActiveTab(initialTab);
     }
   }, [isOpen, initialTab]);
-
-  useEffect(() => {
-    if (isOpen && targetExperienceId && experiences.length > 0) {
-      const exp = experiences.find(e => e.id === targetExperienceId);
-      if (exp) {
-        setActiveTab('experience');
-        setEditingExperienceId(exp.id || null);
-        setExperienceForm({
-          company: exp.company,
-          role: exp.role,
-          period: exp.period,
-          location: exp.location,
-          description: exp.description,
-          highlights: (exp.highlights || []).join('\n'),
-          skills: (exp.skills || []).join(', '),
-          order: exp.order ?? 1,
-        });
-        setIsEditingExperience(true);
-      }
-    }
-  }, [isOpen, targetExperienceId, experiences]);
 
   // Security Form State
   const [newPassword, setNewPassword] = useState('');
@@ -354,142 +349,11 @@ export function AdminDashboardModal({
     await updatePersonalInfo({
       ...profileForm,
       avatarUrl: profileForm.avatarUrl.trim() || null,
+      avatarType: profileForm.avatarType || 'image',
+      avatarVideoUrl: profileForm.avatarVideoUrl ? profileForm.avatarVideoUrl.trim() : null,
     });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
-  };
-
-  // Experience Action Handlers
-  const handleStartAddExperience = () => {
-    setEditingExperienceId(null);
-    setExperienceForm({
-      company: '',
-      role: '',
-      period: '2026 — Hiện tại',
-      location: 'Việt Nam & Remote',
-      description: '',
-      highlights: 'Dẫn dắt phát triển hệ thống web phân tán\nTối ưu hóa hiệu năng và pipeline CI/CD',
-      skills: 'React, TypeScript, Tailwind CSS, Docker',
-      order: (experiences.length > 0 ? Math.max(...experiences.map(e => e.order || 0)) : 0) + 1,
-    });
-    setIsEditingExperience(true);
-    setExperienceNotice(null);
-  };
-
-  const handleStartEditExperience = (exp: ExperienceItem) => {
-    setEditingExperienceId(exp.id || null);
-    setExperienceForm({
-      company: exp.company,
-      role: exp.role,
-      period: exp.period,
-      location: exp.location,
-      description: exp.description,
-      highlights: (exp.highlights || []).join('\n'),
-      skills: (exp.skills || []).join(', '),
-      order: exp.order ?? 1,
-    });
-    setIsEditingExperience(true);
-    setExperienceNotice(null);
-  };
-
-  const handleSaveExperience = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setExperienceLoading(true);
-    setExperienceNotice(null);
-    try {
-      const highlightsArray = experienceForm.highlights
-        .split('\n')
-        .map(h => h.trim().replace(/^[•\-\*▸\s]+/, ''))
-        .filter(Boolean);
-
-      const skillsArray = experienceForm.skills
-        .split(/[,·]/)
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const payload: Omit<ExperienceItem, 'id'> = {
-        company: experienceForm.company.trim(),
-        role: experienceForm.role.trim(),
-        period: experienceForm.period.trim(),
-        location: experienceForm.location.trim(),
-        description: experienceForm.description.trim(),
-        highlights: highlightsArray.length > 0 ? highlightsArray : ['Đóng góp phát triển và tối ưu ứng dụng'],
-        skills: skillsArray.length > 0 ? skillsArray : ['React', 'TypeScript'],
-        order: Number(experienceForm.order) || 1,
-      };
-
-      if (editingExperienceId) {
-        await editExperience(editingExperienceId, payload);
-        setExperienceNotice({
-          type: 'success',
-          text: `Đã cập nhật mục kinh nghiệm "${payload.role} tại ${payload.company}" thành công!`
-        });
-      } else {
-        await addExperience(payload);
-        setExperienceNotice({
-          type: 'success',
-          text: `Đã thêm mục kinh nghiệm "${payload.role} tại ${payload.company}" thành công!`
-        });
-      }
-
-      setIsEditingExperience(false);
-      setEditingExperienceId(null);
-      setTimeout(() => setExperienceNotice(null), 4000);
-    } catch (err: any) {
-      setExperienceNotice({
-        type: 'error',
-        text: `Lỗi khi lưu kinh nghiệm: ${err.message || 'Vui lòng thử lại'}`
-      });
-    } finally {
-      setExperienceLoading(false);
-    }
-  };
-
-  const handleDeleteExperience = (exp: ExperienceItem) => {
-    if (!exp.id) return;
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Xóa mục kinh nghiệm',
-      message: `Bạn có chắc muốn xóa mục kinh nghiệm "${exp.role} tại ${exp.company}" không?`,
-      action: async () => {
-        try {
-          await deleteExperience(exp.id!);
-          setExperienceNotice({
-            type: 'success',
-            text: `Đã xóa mục kinh nghiệm "${exp.role}".`
-          });
-          setTimeout(() => setExperienceNotice(null), 3000);
-        } catch (err: any) {
-          setExperienceNotice({
-            type: 'error',
-            text: `Lỗi khi xóa: ${err.message}`
-          });
-        }
-      }
-    });
-  };
-
-  const handleResetExperiences = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Khôi phục kinh nghiệm mặc định',
-      message: 'Khôi phục danh sách lộ trình kinh nghiệm về 3 mục chuẩn ban đầu?',
-      action: async () => {
-        try {
-          await resetExperiencesToDefault();
-          setExperienceNotice({
-            type: 'success',
-            text: 'Đã khôi phục danh sách kinh nghiệm chuẩn thành công!'
-          });
-          setTimeout(() => setExperienceNotice(null), 3000);
-        } catch (err: any) {
-          setExperienceNotice({
-            type: 'error',
-            text: `Lỗi khôi phục: ${err.message}`
-          });
-        }
-      }
-    });
   };
 
   // Handle Password Change
@@ -546,7 +410,11 @@ export function AdminDashboardModal({
         {/* Top Bar Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            {profileForm.avatarUrl ? (
+            {profileForm.avatarType === 'video' && profileForm.avatarVideoUrl ? (
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-cyan-400 bg-slate-900 shrink-0 shadow-lg">
+                <video src={profileForm.avatarVideoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+              </div>
+            ) : profileForm.avatarUrl ? (
               <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-cyan-400 bg-slate-900 shrink-0 shadow-lg">
                 <img src={profileForm.avatarUrl} alt="Admin Avatar" className="w-full h-full object-cover" />
               </div>
@@ -565,7 +433,7 @@ export function AdminDashboardModal({
                   Admin: {user?.email}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Quản lý và đổi ảnh đại diện, dự án, bài viết trên website</p>
+              <p className="text-xs text-slate-400">Quản lý hồ sơ, đổi ảnh đại diện, tin nhắn khách hàng, live chat và bảo mật hệ thống</p>
             </div>
           </div>
 
@@ -602,18 +470,6 @@ export function AdminDashboardModal({
           >
             <User className="w-4 h-4" />
             <span>Hồ sơ & Ảnh đại diện</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('experience')}
-            className={`pb-3 px-3 text-xs font-semibold tracking-wide border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'experience'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Briefcase className="w-4 h-4" />
-            <span>Kinh nghiệm & Kỹ năng ({experiences.length})</span>
           </button>
 
           <button
@@ -675,17 +531,42 @@ export function AdminDashboardModal({
 
               {/* Avatar section */}
               <div className="p-5 rounded-2xl bg-slate-950/70 border border-cyan-900/40 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <span>Ảnh đại diện hiển thị trên trang chủ</span>
+                    <span>Ảnh &amp; Video đại diện hiển thị trên trang chủ</span>
                   </h3>
-                  <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-md border border-cyan-800/60">
-                    Chỉ quản trị viên mới có quyền đổi
-                  </span>
+
+                  {/* Mode Selector Tabs: Photo vs Video */}
+                  <div className="flex items-center gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setProfileForm({ ...profileForm, avatarType: 'image' })}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        profileForm.avatarType !== 'video'
+                          ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Image className="w-3.5 h-3.5" />
+                      <span>Ảnh Đại Diện</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProfileForm({ ...profileForm, avatarType: 'video' })}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        profileForm.avatarType === 'video'
+                          ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Film className="w-3.5 h-3.5" />
+                      <span>Video Đại Diện (Live)</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Hidden File Input */}
+                {/* Hidden File Inputs */}
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -693,72 +574,149 @@ export function AdminDashboardModal({
                   accept="image/*" 
                   className="hidden" 
                 />
+                <input 
+                  type="file" 
+                  ref={videoInputRef} 
+                  onChange={handleVideoUpload} 
+                  accept="video/*" 
+                  className="hidden" 
+                />
 
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  {/* Clickable Avatar Preview with hover camera badge */}
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="group relative w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl cursor-pointer hover:border-cyan-300 transition-all"
-                    title="Bấm để tải ảnh mới từ máy tính / điện thoại"
-                  >
-                    {profileForm.avatarUrl ? (
-                      <img src={profileForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:opacity-75 transition-opacity" />
-                    ) : (
-                      <User className="w-12 h-12 text-slate-500 group-hover:scale-110 transition-transform" />
-                    )}
-                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[10px] font-medium gap-1">
-                      <Camera className="w-5 h-5 text-cyan-300" />
-                      <span>Đổi ảnh</span>
+                {profileForm.avatarType === 'video' ? (
+                  /* Video Avatar Controls */
+                  <div className="flex flex-col sm:flex-row items-center gap-6 pt-1">
+                    {/* Clickable Video Preview */}
+                    <div 
+                      onClick={() => videoInputRef.current?.click()}
+                      className="group relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-cyan-400 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl cursor-pointer hover:border-cyan-300 transition-all"
+                      title="Bấm để tải video đại diện mới từ máy tính / điện thoại"
+                    >
+                      {profileForm.avatarVideoUrl ? (
+                        <video 
+                          src={profileForm.avatarVideoUrl} 
+                          autoPlay 
+                          loop 
+                          muted 
+                          playsInline 
+                          className="w-full h-full object-cover group-hover:opacity-75 transition-opacity" 
+                        />
+                      ) : (
+                        <Film className="w-10 h-10 text-cyan-400 group-hover:scale-110 transition-transform" />
+                      )}
+                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[10px] font-medium gap-1">
+                        <Upload className="w-5 h-5 text-cyan-300" />
+                        <span>Đổi video</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex-1 w-full space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-3.5 py-1.5 text-xs font-semibold bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-cyan-950/40"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Tải ảnh từ máy tính / điện thoại</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setProfileForm({ ...profileForm, avatarUrl: 'https://github.com/shinikenvin.png' })}
-                        className="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-750 text-cyan-300 rounded-xl transition-colors flex items-center gap-1.5 border border-slate-700/80"
-                      >
-                        <Image className="w-3.5 h-3.5" />
-                        <span>Dùng ảnh GitHub (shinikenvin.png)</span>
-                      </button>
-
-                      {profileForm.avatarUrl && (
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setProfileForm({ ...profileForm, avatarUrl: '' })}
-                          className="px-3 py-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition-colors flex items-center gap-1"
+                          onClick={() => videoInputRef.current?.click()}
+                          className="px-3.5 py-1.5 text-xs font-semibold bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-cyan-950/40 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Đặt lại ảnh minh họa</span>
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Tải video từ máy tính / điện thoại (.mp4, .webm)</span>
                         </button>
-                      )}
-                    </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Link className="w-3 h-3 text-slate-500" />
-                        <span>Hoặc dán trực tiếp đường dẫn URL hình ảnh:</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={profileForm.avatarUrl}
-                        onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
-                        placeholder="https://example.com/my-photo.jpg"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
-                      />
+                        {profileForm.avatarVideoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setProfileForm({ ...profileForm, avatarVideoUrl: '' })}
+                            className="px-3 py-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Xóa video</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Link className="w-3 h-3 text-slate-500" />
+                          <span>Hoặc dán trực tiếp đường dẫn URL Video (YouTube, Vimeo, Loom hoặc file .mp4):</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.avatarVideoUrl}
+                          onChange={(e) => setProfileForm({ ...profileForm, avatarVideoUrl: e.target.value })}
+                          placeholder="https://www.youtube.com/watch?v=... hoặc https://.../avatar.mp4"
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-emerald-400 font-mono">
+                        ✓ Video sẽ tự động lặp lại (Loop) mượt mà trên trang chủ, mang lại phong cách sống động và hiện đại.
+                      </p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Photo Avatar Controls (Exact user screenshot experience) */
+                  <div className="flex flex-col sm:flex-row items-center gap-6 pt-1">
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="group relative w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 bg-slate-900 flex items-center justify-center shrink-0 shadow-xl cursor-pointer hover:border-cyan-300 transition-all"
+                      title="Bấm để tải ảnh mới từ máy tính / điện thoại"
+                    >
+                      {profileForm.avatarUrl ? (
+                        <img src={profileForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:opacity-75 transition-opacity" />
+                      ) : (
+                        <User className="w-12 h-12 text-slate-500 group-hover:scale-110 transition-transform" />
+                      )}
+                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[10px] font-medium gap-1">
+                        <Camera className="w-5 h-5 text-cyan-300" />
+                        <span>Đổi ảnh</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3.5 py-1.5 text-xs font-semibold bg-cyan-400 hover:bg-cyan-300 text-slate-950 rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-cyan-950/40 cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Tải ảnh từ máy tính / điện thoại</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setProfileForm({ ...profileForm, avatarUrl: 'https://github.com/shinikenvin.png' })}
+                          className="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-750 text-cyan-300 rounded-xl transition-colors flex items-center gap-1.5 border border-slate-700/80 cursor-pointer"
+                        >
+                          <Image className="w-3.5 h-3.5" />
+                          <span>Dùng ảnh GitHub (shinikenvin.png)</span>
+                        </button>
+
+                        {profileForm.avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setProfileForm({ ...profileForm, avatarUrl: '' })}
+                            className="px-3 py-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Đặt lại ảnh minh họa</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Link className="w-3 h-3 text-slate-500" />
+                          <span>Hoặc dán trực tiếp đường dẫn URL hình ảnh:</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.avatarUrl}
+                          onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
+                          placeholder="https://example.com/my-photo.jpg"
+                          className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Text fields */}
@@ -878,497 +836,7 @@ export function AdminDashboardModal({
             </form>
           )}
 
-          {/* TAB 3: Blog Posts CMS */}
-          {activeTab === 'blog' && (
-            <div className="space-y-6">
-              {!isEditingBlog ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-white">Danh Sách Bài Viết Kỹ Thuật</h3>
-                      <p className="text-xs text-slate-400">Quản lý các bài viết trên trang blog cá nhân</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setEditingBlogId(null);
-                        setBlogForm({
-                          title: '',
-                          category: 'DevOps & CI/CD',
-                          summary: '',
-                          content: '',
-                          tags: 'GitHub Actions, CI/CD, DevOps',
-                          readTime: '4 phút',
-                        });
-                        setIsEditingBlog(true);
-                      }}
-                      className="px-3.5 py-2 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl flex items-center gap-1.5 shadow-md shadow-cyan-950/40"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Thêm Bài Viết Mới</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {blogPosts.map((post) => (
-                      <div key={post.id} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-[11px] font-mono">
-                            <span className="text-cyan-400">{post.category}</span>
-                            <span className="text-slate-500">·</span>
-                            <span className="text-slate-400">{post.date}</span>
-                            <span className="text-slate-500">·</span>
-                            <span className="text-slate-400">{post.readTime}</span>
-                          </div>
-                          <h4 className="text-sm font-bold text-white">{post.title}</h4>
-                          <p className="text-xs text-slate-300 line-clamp-1">{post.summary}</p>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => handleStartEditBlog(post)}
-                            className="p-1.5 text-xs text-cyan-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Sửa</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setConfirmDialog({
-                                isOpen: true,
-                                title: 'Xóa bài viết',
-                                message: `Bạn có chắc muốn xóa bài viết "${post.title}" không?`,
-                                action: () => deleteBlogPost(post.id)
-                              });
-                            }}
-                            className="p-1.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg transition-colors flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Xóa</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <form onSubmit={handleSaveBlog} className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h3 className="text-sm font-bold text-white">
-                      {editingBlogId ? 'Chỉnh Sửa Bài Viết' : 'Tạo Bài Viết Mới'}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingBlog(false)}
-                      className="text-xs text-slate-400 hover:text-white"
-                    >
-                      Hủy bỏ
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Tiêu đề bài viết</label>
-                      <input
-                        type="text"
-                        value={blogForm.title}
-                        onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })}
-                        placeholder="Tiêu đề bài viết..."
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Chủ đề</label>
-                      <select
-                        value={blogForm.category}
-                        onChange={(e) => setBlogForm({ ...blogForm, category: e.target.value })}
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                      >
-                        <option value="DevOps & CI/CD">DevOps & CI/CD</option>
-                        <option value="Frontend & UI">Frontend & UI</option>
-                        <option value="Kiến trúc & Design">Kiến trúc & Design</option>
-                        <option value="Hiệu năng & Tối ưu">Hiệu năng & Tối ưu</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Thẻ tag (cách nhau bằng dấu phẩy)</label>
-                      <input
-                        type="text"
-                        value={blogForm.tags}
-                        onChange={(e) => setBlogForm({ ...blogForm, tags: e.target.value })}
-                        placeholder="React, CSS, Architecture"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Thời gian đọc ước tính</label>
-                      <input
-                        type="text"
-                        value={blogForm.readTime}
-                        onChange={(e) => setBlogForm({ ...blogForm, readTime: e.target.value })}
-                        placeholder="Vd: 5 phút"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Tóm tắt nội dung</label>
-                    <textarea
-                      rows={2}
-                      value={blogForm.summary}
-                      onChange={(e) => setBlogForm({ ...blogForm, summary: e.target.value })}
-                      placeholder="Tóm tắt ngắn hiển thị trên thẻ bài viết..."
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Nội dung chi tiết bài viết</label>
-                    <textarea
-                      rows={6}
-                      value={blogForm.content}
-                      onChange={(e) => setBlogForm({ ...blogForm, content: e.target.value })}
-                      placeholder="Viết nội dung bài viết kỹ thuật ở đây..."
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingBlog(false)}
-                      className="px-4 py-2 text-xs text-slate-400 hover:text-white"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl shadow-md"
-                    >
-                      {editingBlogId ? 'Cập Nhật Bài Viết' : 'Xuất Bản Bài Viết'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: Experience & Career Timeline */}
-          {activeTab === 'experience' && (
-            <div className="space-y-6">
-              {/* Header bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-cyan-400" />
-                    <span>Quản Lý Lộ Trình Kinh Nghiệm & Kỹ Năng</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Chỉnh sửa các vị trí công tác, thời gian, mô tả và thành tựu hiển thị trên mục "03. Kinh nghiệm làm việc"
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleResetExperiences}
-                    className="px-3 py-2 text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center gap-1.5"
-                    title="Khôi phục danh sách chuẩn mặc định"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Khôi phục mặc định</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleStartAddExperience}
-                    className="px-4 py-2 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-md shadow-cyan-950/50 flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Thêm kinh nghiệm mới</span>
-                  </button>
-                </div>
-              </div>
-
-              {experienceNotice && (
-                <div className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
-                  experienceNotice.type === 'success'
-                    ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
-                    : 'bg-rose-950/60 border-rose-800/80 text-rose-300'
-                }`}>
-                  {experienceNotice.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                  )}
-                  <span>{experienceNotice.text}</span>
-                </div>
-              )}
-
-              {/* Form or List View */}
-              {isEditingExperience ? (
-                <form onSubmit={handleSaveExperience} className="p-5 rounded-2xl bg-slate-950/70 border border-cyan-900/50 space-y-4 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Edit3 className="w-4 h-4 text-cyan-400" />
-                      <span>{editingExperienceId ? 'Chỉnh Sửa Mục Kinh Nghiệm' : 'Thêm Mục Kinh Nghiệm Mới'}</span>
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditingExperience(false);
-                        setEditingExperienceId(null);
-                      }}
-                      className="text-xs text-slate-400 hover:text-white"
-                    >
-                      Hủy bỏ
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                        <span>Chức danh / Vị trí đảm nhiệm</span>
-                        <span className="text-rose-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={experienceForm.role}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, role: e.target.value })}
-                        placeholder="Vd: Senior Full-Stack Engineer / Team Lead"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                        <span>Tên công ty / Tổ chức</span>
-                        <span className="text-rose-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={experienceForm.company}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, company: e.target.value })}
-                        placeholder="Vd: TechCraft Solutions"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                        <span>Khoảng thời gian công tác</span>
-                        <span className="text-rose-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={experienceForm.period}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, period: e.target.value })}
-                        placeholder="Vd: 2024 — Hiện tại hoặc 2022 — 2024"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                        <span>Địa điểm / Hình thức</span>
-                        <span className="text-rose-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={experienceForm.location}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, location: e.target.value })}
-                        placeholder="Vd: Việt Nam & Remote hoặc TP. Hồ Chí Minh"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                      <span>Mô tả tổng quan vai trò và đóng góp chính</span>
-                      <span className="text-rose-400">*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={experienceForm.description}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, description: e.target.value })}
-                      placeholder="Dẫn dắt phát triển hệ thống web phân tán, thiết kế kiến trúc frontend quy mô lớn..."
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 leading-relaxed"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-slate-300">
-                        Các thành tựu & điểm nổi bật (Highlights)
-                      </label>
-                      <span className="text-[10px] text-slate-400">Mỗi dòng là một gạch đầu dòng ▸ trên giao diện</span>
-                    </div>
-                    <textarea
-                      rows={4}
-                      value={experienceForm.highlights}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, highlights: e.target.value })}
-                      placeholder="Tái cấu trúc hệ thống frontend từ monolith sang micro-frontends, tăng tốc độ build 4.2 lần&#10;Xây dựng hệ thống CI/CD chuẩn hóa với GitHub Actions..."
-                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-mono text-xs leading-relaxed"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">
-                        Kỹ năng & Công nghệ (cách nhau bằng dấu phẩy)
-                      </label>
-                      <input
-                        type="text"
-                        value={experienceForm.skills}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, skills: e.target.value })}
-                        placeholder="React, TypeScript, Tailwind CSS, Docker, GitHub Actions"
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Thứ tự hiển thị (Order)</label>
-                      <input
-                        type="number"
-                        value={experienceForm.order}
-                        onChange={(e) => setExperienceForm({ ...experienceForm, order: Number(e.target.value) || 1 })}
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800/80">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditingExperience(false);
-                        setEditingExperienceId(null);
-                      }}
-                      className="px-4 py-2 text-xs text-slate-400 hover:text-white transition-colors"
-                    >
-                      Hủy bỏ
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={experienceLoading}
-                      className="px-5 py-2 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 rounded-xl transition-all shadow-md shadow-cyan-950/40"
-                    >
-                      {experienceLoading ? 'Đang lưu...' : (editingExperienceId ? 'Cập Nhật Mục Kinh Nghiệm' : 'Thêm Mục Kinh Nghiệm')}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="space-y-4">
-                  {experiences.length === 0 ? (
-                    <div className="p-12 text-center rounded-2xl bg-slate-950/40 border border-slate-800 text-slate-400 text-xs">
-                      Chưa có mục kinh nghiệm nào. Nhấn "Thêm kinh nghiệm mới" để bắt đầu.
-                    </div>
-                  ) : (
-                    experiences.map((exp, index) => (
-                      <div
-                        key={exp.id || index}
-                        className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-4"
-                      >
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-cyan-950 border border-cyan-800 text-[10px] font-mono text-cyan-400 flex items-center justify-center font-bold">
-                              {index + 1}
-                            </span>
-                            <h4 className="text-sm font-bold text-white">
-                              {exp.role}
-                            </h4>
-                            <span className="text-xs text-slate-500 font-mono">·</span>
-                            <span className="text-xs text-cyan-400 font-medium">
-                              {exp.company}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                            <span className="flex items-center gap-1 font-mono text-[11px] text-slate-300">
-                              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                              {exp.period}
-                            </span>
-                            <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                              <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                              {exp.location}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                            {exp.description}
-                          </p>
-
-                          {exp.highlights && exp.highlights.length > 0 && (
-                            <div className="space-y-1 pt-1">
-                              {exp.highlights.slice(0, 2).map((h, hIdx) => (
-                                <div key={hIdx} className="flex items-start gap-1.5 text-[11px] text-slate-400">
-                                  <span className="text-cyan-400">▸</span>
-                                  <span className="line-clamp-1">{h}</span>
-                                </div>
-                              ))}
-                              {exp.highlights.length > 2 && (
-                                <span className="text-[10px] text-slate-500 italic">
-                                  +{exp.highlights.length - 2} điểm nổi bật khác...
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {exp.skills && exp.skills.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-2">
-                              {exp.skills.map((skill, sIdx) => (
-                                <span
-                                  key={sIdx}
-                                  className="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-900 border border-slate-800 text-slate-300"
-                                >
-                                  {skill}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-2 shrink-0 md:self-start">
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditExperience(exp)}
-                            className="px-3 py-1.5 text-xs text-cyan-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-cyan-900/60 hover:border-cyan-500 rounded-lg transition-colors flex items-center gap-1.5"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Sửa</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteExperience(exp)}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg transition-colors"
-                            title="Xóa mục kinh nghiệm này"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 5: Messages Inbox */}
+          {/* TAB 2: Messages Inbox */}
           {activeTab === 'messages' && (
             <div className="space-y-4">
               <div>

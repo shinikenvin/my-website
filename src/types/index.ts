@@ -11,13 +11,17 @@ export interface Project {
     keyFeatures: string[];
     metrics: { label: string; value: string }[];
   };
-  category: 'web' | 'mobile' | 'ai-cloud' | 'devtools';
+  category: string;
   categoryLabel: string;
   tags: string[];
   demoUrl: string;
   githubUrl: string;
   year: string;
   featured?: boolean;
+  coverImage?: string;
+  videoUrl?: string;
+  videoTitle?: string;
+  galleryImages?: string[];
 }
 
 export interface BlogPost {
@@ -34,6 +38,8 @@ export interface BlogPost {
     sections: {
       heading: string;
       body: string;
+      image?: string;
+      imageCaption?: string;
       codeSnippet?: {
         language: string;
         code: string;
@@ -44,6 +50,10 @@ export interface BlogPost {
     conclusion: string;
   };
   likes: number;
+  coverImage?: string;
+  videoUrl?: string;
+  videoTitle?: string;
+  galleryImages?: string[];
 }
 
 export interface ExperienceItem {
@@ -58,13 +68,17 @@ export interface ExperienceItem {
   order?: number;
 }
 
+export interface SkillItem {
+  id?: string;
+  name: string;
+  level: number; // 0-100
+  experience: string;
+  highlight?: boolean;
+}
+
 export interface SkillGroup {
+  id?: string;
   title: string;
   description: string;
-  skills: {
-    name: string;
-    level: number; // 0-100
-    experience: string;
-    highlight?: boolean;
-  }[];
+  skills: SkillItem[];
 }

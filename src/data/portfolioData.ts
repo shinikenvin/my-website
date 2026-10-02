@@ -6,9 +6,14 @@ export const PERSONAL_INFO = {
   email: 'Shinikenvin@gmail.com',
   github: 'https://github.com/shinikenvin',
   website: 'https://shinikenvin.github.io/my-website/',
+  websiteLabel: 'GitHub Pages Hosting',
   repoUrl: 'https://github.com/shinikenvin/my-website',
   location: 'Việt Nam (Làm việc từ xa & Hybrid)',
   status: 'Sẵn sàng nhận dự án mới & Hợp tác',
+  responseSpeed: 'Phản hồi trong vòng 2-4 giờ làm việc',
+  phone: '',
+  telegram: '',
+  linkedin: '',
   heroHeadline: 'Kiến tạo trải nghiệm số,\nvới hiệu năng đỉnh cao\n& tư duy sản phẩm chuyên sâu.',
   bio: 'Chào bạn, tôi là Shinikenvin, một Full-Stack Software Engineer & Creative Developer. Tôi chuyên xây dựng các ứng dụng web hiện đại, kiến trúc đám mây ổn định, quy trình CI/CD tự động và giao diện người dùng đạt chuẩn quốc tế.',
   stats: [
@@ -30,6 +35,14 @@ export const PROJECTS_DATA: Project[] = [
     tags: ['React 19', 'TypeScript', 'Tailwind CSS', 'Docker', 'GitHub API', 'Node.js'],
     year: '2026',
     featured: true,
+    coverImage: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?q=80&w=1200&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    videoTitle: 'Video Demo: Quy Trình Kích Hoạt & Giám Sát CI/CD Tự Động',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1504639725590-34d0984388bd?q=80&w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop'
+    ],
     demoUrl: 'https://shinikenvin.github.io/my-website/',
     githubUrl: 'https://github.com/shinikenvin/my-website',
     fullCaseStudy: {
@@ -137,6 +150,13 @@ export const BLOG_POSTS: BlogPost[] = [
     date: '28/09/2026',
     tags: ['GitHub Actions', 'CI/CD', 'GitHub Pages', 'Vite', 'DevOps'],
     likes: 142,
+    coverImage: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?q=80&w=1200&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    videoTitle: 'Video Thuyết Minh: Pipeline CI/CD GitHub Actions Thực Tế',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=800&auto=format&fit=crop'
+    ],
     content: {
       introduction: 'Trong quá trình phát triển web cá nhân hay sản phẩm chuyên nghiệp, việc phải tự build thư mục `dist` rồi upload thủ công lên hosting là một thao tác tốn thời gian và dễ phát sinh sai sót. Bài viết này sẽ hướng dẫn bạn thiết lập một quy trình CI/CD hoàn chỉnh bằng GitHub Actions để mỗi khi bạn gõ `git push origin main`, website sẽ tự động được kiểm tra mã, đóng gói và cập nhật trực tiếp lên URL GitHub Pages của bạn.',
       sections: [
@@ -455,6 +475,7 @@ export const EXPERIENCE_DATA: ExperienceItem[] = [
 
 export const SKILL_GROUPS: SkillGroup[] = [
   {
+    id: 'frontend',
     title: 'Frontend & UI Engineering',
     description: 'Xây dựng giao diện trực quan, dễ tiếp cận và hiệu năng mượt mà',
     skills: [
@@ -469,6 +490,7 @@ export const SKILL_GROUPS: SkillGroup[] = [
     ]
   },
   {
+    id: 'backend',
     title: 'Backend & Cloud Services',
     description: 'Thiết kế API an toàn, xử lý dữ liệu và hệ thống phân tán',
     skills: [
@@ -481,6 +503,7 @@ export const SKILL_GROUPS: SkillGroup[] = [
     ]
   },
   {
+    id: 'devops',
     title: 'DevOps, CI/CD & Công Cụ',
     description: 'Tự động hóa triển khai, kiểm thử và quản trị mã nguồn',
     skills: [

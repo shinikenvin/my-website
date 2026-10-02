@@ -183,6 +183,8 @@ export function Hero({ onExploreProjects, onOpenCiCd }: HeroProps) {
               <DeveloperPortrait 
                 className="w-full h-[320px]" 
                 avatarUrl={personalInfo.avatarUrl}
+                avatarType={personalInfo.avatarType}
+                avatarVideoUrl={personalInfo.avatarVideoUrl}
               />
 
               {/* Terminal Quick Card */}

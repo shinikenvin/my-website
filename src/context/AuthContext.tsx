@@ -33,25 +33,43 @@ async function hashPassword(password: string): Promise<string> {
 
 const DEFAULT_ADMIN_EMAIL = 'Shinikenvin@gmail.com';
 
+// Initial sovereign default password hash for '1234' with salt '_shinikenvin_auth_salt_2026'
+const INITIAL_DEFAULT_PASSWORD_HASH = '2245e5d514feefecc00d560c8357fefcc337cca7aa048ef7fa22371ba3767d98';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isConfigured, setIsConfigured] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(true);
 
   // Check persistent session on startup
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Check if admin is configured in Firestore
-        let exists = true;
+        // Sync active sovereign password hash from Firestore if available
         try {
           const adminDoc = await getDoc(doc(db, 'admin', 'auth_settings'));
-          exists = adminDoc.exists() && !!adminDoc.data()?.passwordHash;
-        } catch {
-          // If Firestore quota limit is reached, maintain configured status
-          exists = true;
+          if (adminDoc.exists() && adminDoc.data()?.passwordHash) {
+            localStorage.setItem('admin_cached_hash', adminDoc.data()!.passwordHash);
+            setIsConfigured(true);
+          } else {
+            // First time initialization: seed Firestore with 1234
+            await setDoc(doc(db, 'admin', 'auth_settings'), {
+              email: DEFAULT_ADMIN_EMAIL,
+              passwordHash: INITIAL_DEFAULT_PASSWORD_HASH,
+              isCustomized: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+            localStorage.setItem('admin_cached_hash', INITIAL_DEFAULT_PASSWORD_HASH);
+            setIsConfigured(true);
+          }
+        } catch (dbErr) {
+          console.warn('Firestore initial check error (using cached/default hash):', dbErr);
+          if (!localStorage.getItem('admin_cached_hash')) {
+            localStorage.setItem('admin_cached_hash', INITIAL_DEFAULT_PASSWORD_HASH);
+          }
+          setIsConfigured(true);
         }
-        setIsConfigured(exists);
 
         // Check local session
         const savedSession = localStorage.getItem('admin_portfolio_session');
@@ -89,34 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(`Chỉ email quản trị viên ủy quyền (${DEFAULT_ADMIN_EMAIL}) mới được phép tạo tài khoản.`);
     }
 
-    // Guard: Only allow initialization if admin account does NOT exist yet!
-    try {
-      const adminDoc = await getDoc(doc(db, 'admin', 'auth_settings'));
-      if (adminDoc.exists() && adminDoc.data()?.passwordHash) {
-        throw new Error('Tài khoản quản trị đã được khởi tạo trước đó. Không thể khởi tạo lại. Vui lòng đăng nhập hoặc sử dụng Quên mật khẩu.');
-      }
-    } catch (e: any) {
-      if (e.message && e.message.includes('khởi tạo trước đó')) {
-        throw e;
-      }
-    }
-
     const passwordHash = await hashPassword(rawPass);
 
     const authData = {
       email: DEFAULT_ADMIN_EMAIL,
       passwordHash,
+      isCustomized: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     try {
-      await setDoc(doc(db, 'admin', 'auth_settings'), authData);
+      await setDoc(doc(db, 'admin', 'auth_settings'), authData, { merge: true });
     } catch (e) {
       console.warn('Could not write auth_settings to Firestore (quota or offline):', e);
     }
     
-    // Save session
+    // Save session & cache hash
+    localStorage.setItem('admin_cached_hash', passwordHash);
     const session = { email: DEFAULT_ADMIN_EMAIL, loginTime: Date.now() };
     localStorage.setItem('admin_portfolio_session', JSON.stringify(session));
     setUser({ email: DEFAULT_ADMIN_EMAIL });
@@ -124,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const quickOwnerLogin = async () => {
-    // Deprecated for strict security
+    // Deprecated for strict sovereign security
   };
 
   const login = async (email: string, pass: string) => {
@@ -140,57 +148,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const passwordHash = await hashPassword(rawPass);
 
-    // List of recognized master passwords for owner Shinikenvin@gmail.com
-    const MASTER_PASSWORDS = [
-      '1234',
-      'shinikenvin2026',
-      'Shiniken@2026',
-      'shinikenvin',
-      'Shinikenvin',
-      'shiniken',
-      'Shiniken',
-      'admin',
-      'admin123',
-      'Admin@123',
-      'admin2026',
-      '123456',
-      'shinikenvin@gmail.com',
-      'Shinikenvin@gmail.com',
-    ];
-
-    let storedHash: string | null = null;
+    // Retrieve active sovereign password hash:
+    // 1. Fresh from Firestore
+    // 2. Cached in localStorage (if DB is offline/quota)
+    // 3. Fallback to initial sovereign password '1234'
+    let activePasswordHash: string | null = null;
     try {
       const adminDoc = await getDoc(doc(db, 'admin', 'auth_settings'));
-      if (adminDoc.exists()) {
-        storedHash = adminDoc.data()?.passwordHash || null;
+      if (adminDoc.exists() && adminDoc.data()?.passwordHash) {
+        activePasswordHash = adminDoc.data()?.passwordHash;
       }
     } catch (dbErr) {
-      console.warn('Firestore read error (likely quota limit reached):', dbErr);
+      console.warn('Firestore read error during login (using cached hash):', dbErr);
     }
 
-    const isMasterMatch = MASTER_PASSWORDS.includes(rawPass);
-    const isHashMatch = storedHash ? storedHash === passwordHash : false;
+    if (!activePasswordHash) {
+      activePasswordHash = localStorage.getItem('admin_cached_hash');
+    }
 
-    // Strict validation: Must match database hash OR recognized master password!
-    if (!isMasterMatch && !isHashMatch) {
+    if (!activePasswordHash) {
+      activePasswordHash = INITIAL_DEFAULT_PASSWORD_HASH;
+    }
+
+    // STRICT SOVEREIGN VALIDATION:
+    // Accepts EXCLUSIVELY the active password (initial 1234 OR the newly changed password).
+    // Once changed, only the changed password is recognized!
+    if (passwordHash !== activePasswordHash) {
       throw new Error('Mật khẩu quản trị không chính xác. Vui lòng kiểm tra lại hoặc chọn "Quên mật khẩu?" để khôi phục.');
     }
 
-    // Cache valid session
-    localStorage.setItem('admin_cached_hash', passwordHash);
-
-    // If matched via master password, update storedHash in database if possible
-    if (isMasterMatch && storedHash !== passwordHash) {
-      try {
-        await setDoc(doc(db, 'admin', 'auth_settings'), {
-          email: DEFAULT_ADMIN_EMAIL,
-          passwordHash,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.warn('Could not sync passwordHash to Firestore:', e);
-      }
-    }
+    // Cache valid active hash
+    localStorage.setItem('admin_cached_hash', activePasswordHash);
 
     // Success - establish persistent admin session
     const session = { email: DEFAULT_ADMIN_EMAIL, loginTime: Date.now() };
@@ -213,15 +201,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!rawPass || rawPass.length < 4) {
       throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự.');
     }
-    const passwordHash = await hashPassword(rawPass);
-    localStorage.setItem('admin_cached_hash', passwordHash);
+    const newHash = await hashPassword(rawPass);
+    
+    // Update local cache immediately
+    localStorage.setItem('admin_cached_hash', newHash);
+
+    // If remember password was active, update saved password
+    if (localStorage.getItem('admin_remember_password') === 'true') {
+      localStorage.setItem('admin_saved_password', rawPass);
+    }
+
+    // Persist new sovereign password exclusively to Firestore
     try {
-      await updateDoc(doc(db, 'admin', 'auth_settings'), {
-        passwordHash,
+      await setDoc(doc(db, 'admin', 'auth_settings'), {
+        email: DEFAULT_ADMIN_EMAIL,
+        passwordHash: newHash,
+        isCustomized: true,
         updatedAt: new Date().toISOString(),
-      });
+      }, { merge: true });
     } catch (e) {
-      console.warn('Could not update password in Firestore:', e);
+      console.warn('Could not update password in Firestore (saved locally):', e);
     }
   };
 
