@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Shield, ShieldCheck, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle, 
-  KeyRound, UserCheck, Copy, Check, Send, Eye, EyeOff, Zap, Trash2
+  KeyRound, UserCheck, Check, Send, Eye, EyeOff, Zap, Trash2, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,7 +12,7 @@ interface AdminLoginModalProps {
 }
 
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
-  const { login, quickOwnerLogin, register, resetPassword, verifyResetCodeAndChangePassword, isConfigured } = useAuth();
+  const { login, register, resetPassword, verifyResetCodeAndChangePassword, isConfigured } = useAuth();
   
   // Saved credentials state - strictly default to FALSE
   const [savedPasswordExists, setSavedPasswordExists] = useState(false);
@@ -24,8 +24,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -35,6 +34,14 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
   const otpInputRef = useRef<HTMLInputElement>(null);
   const newPasswordInputRef = useRef<HTMLInputElement>(null);
   const hasInitializedForOpenRef = useRef(false);
+
+  // Countdown timer for Resend OTP
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown(prev => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
 
   // Initialize ONLY once when modal opens, NEVER wiping user typed input on re-renders
   useEffect(() => {
@@ -129,10 +136,10 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
         }
         onSuccess();
       } else if (mode === 'forgot') {
-        const result = await resetPassword(finalEmail);
-        setGeneratedCode(result.code);
+        await resetPassword(finalEmail);
         setMode('verify_otp');
-        setSuccessMsg(`Mã khôi phục bảo mật đã được tạo cho email ${result.email}. Hãy nhập mã 6 số bên dưới và đặt mật khẩu mới.`);
+        setSuccessMsg(`Mã xác thực bảo mật gồm 6 chữ số đã được gửi tới email ${finalEmail}. Vui lòng mở hộp thư để kiểm tra.`);
+        setResendCountdown(60);
       } else if (mode === 'verify_otp') {
         await verifyResetCodeAndChangePassword(finalOtp, finalNewPass);
         handleSaveCredentials(finalEmail, finalNewPass);
@@ -156,16 +163,24 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
     }
   };
 
-  const handleCopyCode = () => {
-    if (generatedCode) {
-      navigator.clipboard.writeText(generatedCode);
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const finalEmail = (emailInputRef.current?.value ?? email).trim() || 'Shinikenvin@gmail.com';
+      await resetPassword(finalEmail);
+      setSuccessMsg(`Mã xác thực bảo mật mới đã được gửi lại tới email ${finalEmail}. Vui lòng kiểm tra hộp thư đến.`);
+      setResendCountdown(60);
+    } catch (err: any) {
+      setError(err.message || 'Không thể gửi lại mã xác thực.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -179,94 +194,37 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <div>
               <h3 className="text-base font-bold text-white tracking-tight">
                 {mode === 'login' && 'Đăng Nhập Quản Trị Viên'}
-                {mode === 'register' && 'Khởi Tạo Tài Khoản Admin'}
+                {mode === 'register' && 'Khởi Tạo Tài Khoản Quản Trị'}
                 {mode === 'forgot' && 'Khôi Phục Mật Khẩu Admin'}
                 {mode === 'verify_otp' && 'Xác Thực & Đặt Mật Khẩu Mới'}
               </h3>
-              <p className="text-xs text-slate-400">Hệ thống quản lý nội dung Portfolio CMS</p>
+              <p className="text-xs text-slate-400">
+                {mode === 'login' && 'Hệ thống xác thực chủ sở hữu Portfolio CMS'}
+                {mode === 'register' && 'Thiết lập mật khẩu quản trị ban đầu cho tài khoản'}
+                {mode === 'forgot' && 'Gửi mã xác thực bảo mật về địa chỉ Email'}
+                {mode === 'verify_otp' && 'Hệ thống quản lý nội dung Portfolio CMS'}
+              </p>
             </div>
           </div>
           <button
-            onClick={() => {
-              if (!rememberPassword) setPassword('');
-              onClose();
-            }}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-5">
-          {/* First-time setup banner ONLY if database is NOT configured yet */}
-          {!isConfigured && mode === 'register' && (
-            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-xs text-cyan-300 flex items-start gap-2.5 leading-relaxed">
-              <UserCheck className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white font-semibold">Khởi tạo tài khoản quản trị lần đầu tiên:</strong>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Hệ thống chưa có tài khoản admin. Vui lòng đặt mật khẩu ban đầu để bảo vệ quyền truy cập CMS.
-                </p>
-              </div>
-            </div>
-          )}
-
+        {/* Body Form */}
+        <div className="p-6 space-y-4">
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300 space-y-2.5 leading-relaxed">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-              {mode === 'login' && (
-                <div className="space-y-2 pt-1 border-t border-rose-900/60">
-                  <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
-                    <span className="text-cyan-400 font-semibold">Gợi ý nhanh:</span>
-                    <span>Bạn có thể bấm để tự động điền mật khẩu quản trị chuẩn:</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setPassword('1234');
-                        if (passwordInputRef.current) passwordInputRef.current.value = '1234';
-                      }}
-                      className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
-                    >
-                      <KeyRound className="w-3 h-3 text-emerald-400" />
-                      <span>Điền mật khẩu: 1234</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setPassword('shinikenvin2026');
-                        if (passwordInputRef.current) passwordInputRef.current.value = 'shinikenvin2026';
-                      }}
-                      className="px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
-                    >
-                      <KeyRound className="w-3 h-3 text-cyan-400" />
-                      <span>Điền: shinikenvin2026</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setMode('forgot');
-                      }}
-                      className="px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors cursor-pointer ml-auto"
-                    >
-                      <span>Quên mật khẩu? (Lấy OTP)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 flex items-start gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/80 text-xs text-emerald-300 flex items-start gap-2 leading-relaxed">
+            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800 text-xs text-emerald-300 flex items-start gap-2 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>{successMsg}</span>
             </div>
@@ -282,7 +240,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
               <button
                 type="button"
                 onClick={handleClearSavedPassword}
-                className="text-[11px] text-slate-400 hover:text-rose-400 flex items-center gap-1 transition-colors ml-2"
+                className="text-[11px] text-slate-400 hover:text-rose-400 flex items-center gap-1 transition-colors ml-2 cursor-pointer"
                 title="Xóa mật khẩu đã lưu"
               >
                 <Trash2 className="w-3 h-3" />
@@ -291,25 +249,22 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             </div>
           )}
 
-          {/* If OTP generated, show recovery PIN display box */}
-          {mode === 'verify_otp' && generatedCode && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-cyan-800/80 space-y-2">
-              <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
-                <span>Mã khôi phục xác thực của bạn:</span>
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 text-[11px]"
-                >
-                  {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedCode ? 'Đã sao chép' : 'Sao chép'}</span>
-                </button>
+          {/* Security Email Notice Card - ZERO CODE LEAK - Strictly Secure */}
+          {mode === 'verify_otp' && (
+            <div className="p-4 rounded-xl bg-slate-950 border border-cyan-800/80 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                <Mail className="w-4 h-4 text-cyan-400" />
+                <span>Mã xác thực đã được gửi tới email quản trị:</span>
               </div>
-              <div className="text-center py-2 text-2xl font-mono font-extrabold tracking-widest text-cyan-400 bg-cyan-950/40 rounded-lg border border-cyan-900/60">
-                {generatedCode}
+              <div className="text-xs font-mono text-white bg-slate-900/90 px-3 py-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                <span>{email}</span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Đã gửi email
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                Mã này được gửi xác nhận đến địa chỉ email <strong className="text-white font-mono">{email}</strong>.
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Vui lòng kiểm tra hộp thư email (bao gồm cả thư mục <strong>Hộp thư đến</strong> và <strong>Spam / Thư rác</strong>) để lấy mã xác thực 6 số và nhập vào bên dưới.
               </p>
             </div>
           )}
@@ -360,7 +315,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                         setError(null);
                         setSuccessMsg(null);
                       }}
-                      className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors"
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
                     >
                       Quên mật khẩu?
                     </button>
@@ -393,7 +348,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
                     title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     tabIndex={-1}
                   >
@@ -427,7 +382,9 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             {mode === 'verify_otp' && (
               <>
                 <div className="space-y-1.5">
-                  <label htmlFor="admin_otp_token" className="text-xs font-medium text-slate-300 cursor-pointer">Nhập mã xác thực 6 số</label>
+                  <label htmlFor="admin_otp_token" className="text-xs font-medium text-slate-300 cursor-pointer">
+                    Nhập mã xác thực 6 số nhận từ Email
+                  </label>
                   <input
                     ref={otpInputRef}
                     type="text"
@@ -444,7 +401,9 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="admin_new_passcode" className="text-xs font-medium text-slate-300 cursor-pointer">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+                  <label htmlFor="admin_new_passcode" className="text-xs font-medium text-slate-300 cursor-pointer">
+                    Mật khẩu mới (tối thiểu 4 ký tự)
+                  </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none select-none" />
                     <input
@@ -468,12 +427,26 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+
+                {/* Resend OTP button */}
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                  <span>Chưa nhận được mã qua email?</span>
+                  <button
+                    type="button"
+                    disabled={resendCountdown > 0 || loading}
+                    onClick={handleResendOtp}
+                    className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>{resendCountdown > 0 ? `Gửi lại sau (${resendCountdown}s)` : 'Gửi lại mã OTP'}</span>
+                  </button>
                 </div>
               </>
             )}
@@ -481,7 +454,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-md shadow-cyan-950/40 flex items-center justify-center gap-2 disabled:opacity-50 mt-2 active:scale-[0.99]"
+              className="w-full py-2.5 px-4 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-xl transition-all shadow-md shadow-cyan-950/40 flex items-center justify-center gap-2 disabled:opacity-50 mt-2 active:scale-[0.99] cursor-pointer"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
@@ -517,7 +490,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   {mode === 'verify_otp' && (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Cập Nhật Mật Khẩu & Đăng Nhập</span>
+                      <span>Cập Nhật Mật Khẩu &amp; Đăng Nhập</span>
                     </>
                   )}
                 </>
@@ -525,8 +498,8 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             </button>
           </form>
 
-          {/* Mode Switchers Footer Links */}
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          {/* Footer Modes Navigation */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
             {mode === 'login' && (
               <>
                 {!isConfigured ? (
@@ -537,7 +510,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                       setError(null);
                       setSuccessMsg(null);
                     }}
-                    className="hover:text-cyan-300 transition-colors"
+                    className="hover:text-cyan-300 transition-colors cursor-pointer"
                   >
                     Khởi tạo tài khoản Admin
                   </button>
@@ -551,7 +524,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="hover:text-cyan-300 transition-colors ml-auto"
+                  className="hover:text-cyan-300 transition-colors ml-auto cursor-pointer"
                 >
                   Quên mật khẩu?
                 </button>
@@ -567,7 +540,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="hover:text-cyan-300 transition-colors"
+                  className="hover:text-cyan-300 transition-colors cursor-pointer"
                 >
                   Đã có tài khoản? Đăng nhập ngay
                 </button>
@@ -578,7 +551,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="hover:text-cyan-300 transition-colors"
+                  className="hover:text-cyan-300 transition-colors cursor-pointer"
                 >
                   Quên mật khẩu?
                 </button>
@@ -593,7 +566,7 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
                   setError(null);
                   setSuccessMsg(null);
                 }}
-                className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
               >
                 ← Quay lại Đăng nhập
               </button>

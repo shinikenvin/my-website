@@ -390,10 +390,10 @@ export function AdminDashboardModal({
     setSecurityMsg(null);
     try {
       if (user?.email) {
-        const result = await resetPassword(user.email);
+        await resetPassword(user.email);
         setSecurityMsg({ 
           type: 'success', 
-          text: `Mã xác thực bảo mật khôi phục mật khẩu đã được tạo: ${result.code} (Gửi đến ${result.email})!` 
+          text: `Email hướng dẫn đặt lại mật khẩu đã được gửi trực tiếp tới ${user.email}. Vui lòng kiểm tra hộp thư đến (Inbox / Spam) để hoàn tất.` 
         });
       }
     } catch (err: any) {
